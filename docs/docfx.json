@@ -1,0 +1,28 @@
+{
+  "build": {
+    "content": [
+      {
+        "files": [
+          "*.md",
+          "guide/*.md",
+          "toc.yml",
+          "guide/toc.yml"
+        ]
+      }
+    ],
+    "dest": "_site",
+    "globalMetadata": {
+      "_appTitle": "Retro Game Cover Downloader",
+      "_appFooter": "Retro Game Cover Downloader | Pure Logic Code | GPL-3.0",
+      "_enableSearch": true,
+      "_disableContribution": true
+    },
+    "template": [
+      "default",
+      "modern"
+    ],
+    "sitemap": {
+      "baseUrl": "https://purelogiccode.github.io/RetroGameCoverDownloader/"
+    }
+  }
+}

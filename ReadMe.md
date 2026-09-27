@@ -1,6 +1,14 @@
 [![C#](https://img.shields.io/badge/C%23-.NET%2010.0-blue.svg)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/WPF-Desktop%20App-blue.svg)](https://docs.microsoft.com/en-us/dotnet/desktop/wpf/)
 [![GitHub](https://img.shields.io/badge/GitHub-API%20Integration-lightgrey.svg)](https://docs.github.com/en/rest)
+[![CI](https://github.com/purelogiccode/RetroGameCoverDownloader/actions/workflows/ci.yml/badge.svg)](https://github.com/purelogiccode/RetroGameCoverDownloader/actions/workflows/ci.yml)
+[![Docs](https://github.com/purelogiccode/RetroGameCoverDownloader/actions/workflows/docs.yml/badge.svg)](https://github.com/purelogiccode/RetroGameCoverDownloader/actions/workflows/docs.yml)
+[![Release](https://img.shields.io/github/v/release/purelogiccode/RetroGameCoverDownloader?label=release&sort=semver)](https://github.com/purelogiccode/RetroGameCoverDownloader/releases)
+[![Downloads](https://img.shields.io/github/downloads/purelogiccode/RetroGameCoverDownloader/total?label=downloads)](https://github.com/purelogiccode/RetroGameCoverDownloader/releases)
+[![License](https://img.shields.io/github/license/purelogiccode/RetroGameCoverDownloader?label=license)](LICENSE.txt)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-0078D6?logo=windows)](https://www.microsoft.com/windows)
+[![Pages](https://img.shields.io/badge/docs-GitHub%20Pages-2563eb)](https://purelogiccode.github.io/RetroGameCoverDownloader/)
+[![Wiki](https://img.shields.io/badge/docs-GitHub%20Wiki-333333)](https://github.com/purelogiccode/RetroGameCoverDownloader/wiki)
 
 # 🎮 Retro Game Cover Downloader
 
@@ -9,6 +17,16 @@ A sleek, modern WPF application that automatically downloads missing cover art f
 ## 📖 Overview
 
 Tired of manually hunting for game cover art? **Retro Game Cover Downloader** scans your ROM folders, identifies missing covers, and fetches them directly from libretro's extensive thumbnail database. With built-in rate limit handling, progress tracking, and error reporting, managing your retro gaming library has never been easier!
+
+## Documentation
+
+Full documentation is published in two places:
+
+- **Documentation site**: <https://purelogiccode.github.io/RetroGameCoverDownloader/>
+- **Wiki**: <https://github.com/purelogiccode/RetroGameCoverDownloader/wiki>
+
+The sources live in the [`docs`](docs) folder and are built and published automatically by the
+[`docs` workflow](.github/workflows/docs.yml).
 
 ## ✨ Features
 
@@ -105,17 +123,10 @@ RetroGameCoverDownloader.exe "C:\ROMs" "C:\Covers"
 The project includes a comprehensive test suite using **xunit**:
 
 ```bash
-dotnet test --filter "Category!=Integration"
+dotnet test
 ```
 
-Tests cover models, services, helpers, converters, commands, ViewModels, managers, and integration tests. A `MockBugReportService` is injected via `[ModuleInitializer]` to prevent real API calls during testing.
-
-The integration tests call the live GitHub API and are excluded above. They need a `GITHUB_TOKEN` environment variable to stay within GitHub's rate limits and are skipped without one; to run them:
-
-```bash
-$env:GITHUB_TOKEN = "ghp_your_token"
-dotnet test --filter "Category=Integration"
-```
+Tests cover models, services, helpers, converters, commands, ViewModels, and managers. A `MockBugReportService` is injected via `[ModuleInitializer]` to prevent real API calls during testing.
 
 ## 📄 License
 

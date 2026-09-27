@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Publishes the app for x64 and arm64 as framework-dependent single-file executables
-    and packages each one with ReadMe.md and LICENSE.txt, following the
+    and packages each one with ReadMe.md, LICENSE.txt and WhatsNew.md, following the
     release_<version>_win-<arch>.zip naming convention used by every published release.
 
     Existing files in the output directory are never deleted; only the two bundles for the
@@ -54,7 +54,7 @@ if (-not $StagingDirectory) { $StagingDirectory = Join-Path ([System.IO.Path]::G
 $project = 'RetroGameCoverDownloader\RetroGameCoverDownloader.csproj'
 $exe = 'RetroGameCoverDownloader.exe'
 $architectures = @('x64', 'arm64')
-$documents = @('ReadMe.md', 'LICENSE.txt')
+$documents = @('ReadMe.md', 'LICENSE.txt', 'WhatsNew.md')
 
 foreach ($document in $documents)
 {
@@ -70,7 +70,7 @@ New-Item -ItemType Directory -Force -Path $StagingDirectory | Out-Null
 if (-not $SkipTests)
 {
     Write-Host 'Running tests before packaging...'
-    dotnet test (Join-Path $repoRoot 'RetroGameCoverDownloader.Tests\RetroGameCoverDownloader.Tests.csproj') -c Release --nologo --filter 'Category!=Integration'
+    dotnet test (Join-Path $repoRoot 'RetroGameCoverDownloader.Tests\RetroGameCoverDownloader.Tests.csproj') -c Release --nologo
     if ($LASTEXITCODE -ne 0) { throw 'Tests failed - release bundles were not created.' }
 }
 

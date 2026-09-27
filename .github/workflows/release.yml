@@ -1,8 +1,7 @@
 # Release pipeline for RetroGameCoverDownloader.
 #
 # Flow:
-#   1. verify  - version resolution/validation, build and tests (live GitHub integration
-#                tests are excluded with Category!=Integration).
+#   1. verify  - version resolution/validation, build and tests.
 #   2. bundles - publishes the framework-dependent single-file executable for win-x64 and
 #                win-arm64 into RetroGameCoverDownloader/bin/Release and zips each one with
 #                ReadMe.md and LICENSE.txt, following the release_<version>_win-<arch>.zip
@@ -11,7 +10,8 @@
 #                to the run summary so they can be inspected before approval.
 #   3. publish - waits for approval in the protected `release` environment (configure
 #                Settings -> Environments -> release with required reviewers), then creates
-#                or updates the GitHub release and attaches the zips.
+#                or updates the GitHub release using WhatsNew.md as the release notes and
+#                attaches the zips.
 #
 # Cut a release by pushing a tag that matches the csproj version, e.g.:
 #   git tag release_1.5.0 && git push origin release_1.5.0
@@ -99,8 +99,8 @@ jobs:
       - name: Build (Release)
         run: dotnet build CSharp_RetroGameCoverDownloader.sln -c Release --no-restore
 
-      - name: Test (excluding live GitHub integration tests)
-        run: dotnet test CSharp_RetroGameCoverDownloader.sln -c Release --no-build --filter "Category!=Integration"
+      - name: Test
+        run: dotnet test CSharp_RetroGameCoverDownloader.sln -c Release --no-build
 
   bundles:
     name: Build bundles
@@ -161,6 +161,9 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
       - name: Download bundles
         uses: actions/download-artifact@v8
         with:
@@ -185,11 +188,12 @@ jobs:
           set -euo pipefail
           TAG="release_${VERSION}"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists - uploading/replacing the two bundles."
+            echo "Release $TAG already exists - uploading/replacing the two bundles and updating the notes."
             gh release upload "$TAG" bundles/*.zip --clobber
+            gh release edit "$TAG" --notes-file WhatsNew.md
           elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            gh release create "$TAG" --target "$RELEASE_SHA" --title "$VERSION" --generate-notes bundles/*.zip
+            gh release create "$TAG" --target "$RELEASE_SHA" --title "$VERSION" --notes-file WhatsNew.md bundles/*.zip
           else
-            gh release create "$TAG" --verify-tag --title "$VERSION" --generate-notes bundles/*.zip
+            gh release create "$TAG" --verify-tag --title "$VERSION" --notes-file WhatsNew.md bundles/*.zip
           fi
           echo "Published: $(gh release view "$TAG" --json url --jq .url)"

@@ -1,0 +1,121 @@
+# Builds the documentation site with DocFX, deploys it to GitHub Pages, and mirrors
+# the Markdown sources to the repository wiki.
+#
+# Requirements (see docs/release-process.md):
+#   - Settings -> Pages -> Source: GitHub Actions
+#   - Settings -> Features -> Wikis enabled, with at least one wiki page created so
+#     the wiki repository exists and can be cloned.
+#   - Actions secret WIKI_TOKEN: a classic PAT with the `repo` scope. When the secret
+#     is not configured, the wiki job is skipped with a message instead of failing.
+name: Docs
+
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - "docs/**"
+      - "scripts/publish-wiki.ps1"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOCFX_VERSION: 2.81.0
+
+jobs:
+  build:
+    name: Build documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install DocFX
+        run: dotnet tool install --global docfx --version ${{ env.DOCFX_VERSION }}
+
+      - name: Build site
+        run: docfx docs/docfx.json
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/_site
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+  wiki:
+    name: Publish wiki
+    runs-on: ubuntu-latest
+    env:
+      WIKI_TOKEN: ${{ secrets.WIKI_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check for wiki token
+        id: token
+        shell: bash
+        run: |
+          if [ -z "${WIKI_TOKEN}" ]; then
+            echo "WIKI_TOKEN is not configured; skipping the wiki publish."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Clone wiki
+        if: steps.token.outputs.skip != 'true'
+        shell: bash
+        run: |
+          git clone "https://x-access-token:${WIKI_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" wiki
+
+      - name: Sync documentation
+        if: steps.token.outputs.skip != 'true'
+        shell: pwsh
+        run: >
+          ./scripts/publish-wiki.ps1
+          -SourceDirectory docs
+          -WikiDirectory wiki
+          -NavigationFile docs/guide/toc.yml
+
+      - name: Commit and push
+        if: steps.token.outputs.skip != 'true'
+        working-directory: wiki
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          if git diff --cached --quiet; then
+            echo "The wiki is already up to date."
+          else
+            git commit -m "docs: sync wiki from ${GITHUB_SHA}"
+            git push
+          fi
