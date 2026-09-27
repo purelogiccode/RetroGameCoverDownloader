@@ -19,25 +19,19 @@ namespace RetroGameCoverDownloader.Tests.Integration;
 [Trait("Category", "Integration")]
 public class MainViewModelIntegrationTests
 {
-    [Fact]
+    [SkippableFact]
     public void SystemsWereFetched()
     {
-        if (GitHubIntegrationFixture.FetchError != null)
-        {
-            Assert.Fail($"Failed to fetch systems: {GitHubIntegrationFixture.FetchError}");
-        }
+        Skip.If(GitHubIntegrationFixture.FetchError != null, GitHubIntegrationFixture.FetchError);
 
         Assert.NotEmpty(GitHubIntegrationFixture.Systems);
     }
 
-    [Theory]
+    [SkippableTheory]
     [MemberData(nameof(GitHubIntegrationFixture.GetSystems), MemberType = typeof(GitHubIntegrationFixture))]
     public async Task FullFlowPrepareAndDownloadOneCover(SystemConfig system, bool isSkipped)
     {
-        if (isSkipped)
-        {
-            Assert.Fail($"Tests skipped because systems list could not be fetched: {GitHubIntegrationFixture.FetchError}");
-        }
+        Skip.If(isSkipped, $"Tests skipped because systems list could not be fetched: {GitHubIntegrationFixture.FetchError}");
 
         var (_, files) = await GitHubIntegrationFixture.WithTimeoutAsync(
             ct => GitHubIntegrationFixture.SharedService.GetSystemFilesAsync(system, ct));

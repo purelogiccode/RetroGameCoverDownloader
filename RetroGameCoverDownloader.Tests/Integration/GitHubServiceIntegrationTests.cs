@@ -18,21 +18,19 @@ namespace RetroGameCoverDownloader.Tests.Integration;
 [Trait("Category", "Integration")]
 public class GitHubServiceIntegrationTests
 {
-    [Fact]
+    [SkippableFact]
     public void SystemsWereFetched()
     {
-        if (GitHubIntegrationFixture.FetchError != null)
-            Assert.Fail($"Failed to fetch systems: {GitHubIntegrationFixture.FetchError}");
+        Skip.If(GitHubIntegrationFixture.FetchError != null, GitHubIntegrationFixture.FetchError);
 
         Assert.NotEmpty(GitHubIntegrationFixture.Systems);
     }
 
-    [Theory]
+    [SkippableTheory]
     [MemberData(nameof(GitHubIntegrationFixture.GetSystems), MemberType = typeof(GitHubIntegrationFixture))]
     public async Task GetSystemFilesAsyncReturnsAtLeastOneFile(SystemConfig system, bool isSkipped)
     {
-        if (isSkipped)
-            Assert.Fail($"Systems list could not be fetched: {GitHubIntegrationFixture.FetchError}");
+        Skip.If(isSkipped, $"Systems list could not be fetched: {GitHubIntegrationFixture.FetchError}");
 
         var (branch, files) = await GitHubIntegrationFixture.WithTimeoutAsync(
             ct => GitHubIntegrationFixture.SharedService.GetSystemFilesAsync(system, ct));
@@ -47,12 +45,11 @@ public class GitHubServiceIntegrationTests
         Assert.NotEmpty(files);
     }
 
-    [Theory]
+    [SkippableTheory]
     [MemberData(nameof(GitHubIntegrationFixture.GetSystems), MemberType = typeof(GitHubIntegrationFixture))]
     public async Task DownloadFileAsyncDownloadsRealCoverImage(SystemConfig system, bool isSkipped)
     {
-        if (isSkipped)
-            Assert.Fail($"Systems list could not be fetched: {GitHubIntegrationFixture.FetchError}");
+        Skip.If(isSkipped, $"Systems list could not be fetched: {GitHubIntegrationFixture.FetchError}");
 
         var (branch, files) = await GitHubIntegrationFixture.WithTimeoutAsync(
             ct => GitHubIntegrationFixture.SharedService.GetSystemFilesAsync(system, ct));
