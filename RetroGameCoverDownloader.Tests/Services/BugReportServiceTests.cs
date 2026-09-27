@@ -53,10 +53,38 @@ public class BugReportServiceTests
         Assert.Null(caughtException);
     }
 
+    [Fact]
+    public async Task LogErrorAsyncWithNullExceptionDoesNotThrowOrCallApi()
+    {
+        var handler = new TrackingHandler();
+        var service = new BugReportService
+        {
+            HttpClientFactory = () => new HttpClient(handler)
+        };
+        service.InvalidateHttpClient();
+
+        var exception = await Record.ExceptionAsync(() =>
+            ((IBugReportService)service).LogErrorAsync(null, "context-only report"));
+
+        Assert.Null(exception);
+        Assert.False(handler.WasCalled, "A null exception should not be sent to the bug-report API.");
+    }
+
     private class ImmediateOkHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        }
+    }
+
+    private class TrackingHandler : HttpMessageHandler
+    {
+        public bool WasCalled { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            WasCalled = true;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
         }
     }

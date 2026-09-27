@@ -53,4 +53,14 @@ public static class RetryHelper
 
         return ex is TaskCanceledException { InnerException: TimeoutException };
     }
+
+    /// <summary>
+    /// Returns true for errors that are expected in a networked application and should not be
+    /// surfaced as bug reports: transient HTTP failures and canceled/timed-out requests.
+    /// Unlike <see cref="IsTransientError"/>, this does not imply that a retry is safe.
+    /// </summary>
+    public static bool IsTransientOrCanceledError(Exception ex)
+    {
+        return IsTransientError(ex) || ex is OperationCanceledException;
+    }
 }

@@ -182,6 +182,10 @@ public class GitHubService : IGitHubService
                 lastException = ex;
                 Log.Information("{Context}Branch '{Branch}' not found (404), trying next branch...", context, branch);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 lastException = ex;
@@ -202,6 +206,10 @@ public class GitHubService : IGitHubService
             {
                 Log.Information(lastException, "{Context}GitHub rate limit exceeded on all branches and no cached system list is available. Please try again later, or set a GitHub token to raise the rate limit.", context);
             }
+            else if (RetryHelper.IsTransientOrCanceledError(lastException))
+            {
+                Log.Information(lastException, "{Context}Transient network error on all branches and no cached system list is available. Please try again later.", context);
+            }
             else
             {
                 Log.Error(lastException, "{Context}Failed to fetch available systems from GitHub.", context);
@@ -216,6 +224,23 @@ public class GitHubService : IGitHubService
         return ex is HttpRequestException
         {
             StatusCode: HttpStatusCode.Forbidden or (HttpStatusCode)429
+        };
+    }
+
+    private static bool IsExpectedNetworkFailure(Exception ex)
+    {
+        return IsRateLimitError(ex) || RetryHelper.IsTransientOrCanceledError(ex);
+    }
+
+    private static RetrySettings CreateNoForbiddenRetrySettings(RetrySettings source)
+    {
+        return new RetrySettings
+        {
+            MaxRetries = source.MaxRetries,
+            BackoffMultiplierSeconds = source.BackoffMultiplierSeconds,
+            CircuitBreakerThreshold = source.CircuitBreakerThreshold,
+            CircuitBreakerCooldownSeconds = source.CircuitBreakerCooldownSeconds,
+            RetryOnForbidden = false
         };
     }
 
@@ -255,7 +280,9 @@ public class GitHubService : IGitHubService
 
         Exception? firstException;
 
-        var rawRetrySettings = new RetrySettings { RetryOnForbidden = false };
+        // 403s from raw.githubusercontent.com are not retried: the caller falls back to
+        // the GitHub Contents API instead. All other retry settings are inherited.
+        var rawRetrySettings = CreateNoForbiddenRetrySettings(_retrySettings);
 
         try
         {
@@ -266,6 +293,10 @@ public class GitHubService : IGitHubService
         {
             firstException = ex;
             Log.Information("{Context}raw.githubusercontent.com rate limited ({Reason}), trying GitHub Contents API...", context, ex.Message);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -409,6 +440,10 @@ public class GitHubService : IGitHubService
         {
             throw;
         }
+        catch (Exception ex) when (IsExpectedNetworkFailure(ex))
+        {
+            Log.Information(ex, "{Context}Large-repository fallback failed with a transient network error.", context);
+        }
         catch (Exception ex)
         {
             Log.Error(ex, "GetSystemFilesLargeRepoFallbackAsync failed.");
@@ -482,6 +517,11 @@ public class GitHubService : IGitHubService
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
+            }
+            catch (Exception ex) when (IsExpectedNetworkFailure(ex))
+            {
+                Log.Information(ex, "{Context}Transient failure on attempt {Attempt} of {MaxRetries}: {Url}", context, attempt, _retrySettings.MaxRetries, url);
+                return null;
             }
             catch (Exception ex)
             {

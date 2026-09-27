@@ -6,6 +6,8 @@ namespace RetroGameCoverDownloader.Tests;
 
 internal static class TestModuleInitializer
 {
+    internal static readonly CollectingLogSink LogSink = new();
+
     [ModuleInitializer]
     internal static void Initialize()
     {
@@ -14,6 +16,7 @@ internal static class TestModuleInitializer
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
             .WriteTo.Sink(new UiLogSink())
+            .WriteTo.Sink(LogSink)
             .CreateLogger();
     }
 }

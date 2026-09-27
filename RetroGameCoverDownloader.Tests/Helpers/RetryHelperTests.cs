@@ -195,4 +195,50 @@ public class RetryHelperTests
     }
 
     #endregion
+
+    #region IsTransientOrCanceledError
+
+    [Fact]
+    public void IsTransientOrCanceledErrorTaskCanceledWithoutTimeoutReturnsTrue()
+    {
+        var ex = new TaskCanceledException("The operation was canceled.");
+        Assert.True(RetryHelper.IsTransientOrCanceledError(ex));
+    }
+
+    [Fact]
+    public void IsTransientOrCanceledErrorOperationCanceledReturnsTrue()
+    {
+        var ex = new OperationCanceledException("canceled");
+        Assert.True(RetryHelper.IsTransientOrCanceledError(ex));
+    }
+
+    [Fact]
+    public void IsTransientOrCanceledErrorServerErrorReturnsTrue()
+    {
+        var ex = new HttpRequestException("boom", null, HttpStatusCode.InternalServerError);
+        Assert.True(RetryHelper.IsTransientOrCanceledError(ex));
+    }
+
+    [Fact]
+    public void IsTransientOrCanceledErrorSocketExceptionInnerReturnsTrue()
+    {
+        var ex = new HttpRequestException("network", new SocketException());
+        Assert.True(RetryHelper.IsTransientOrCanceledError(ex));
+    }
+
+    [Fact]
+    public void IsTransientOrCanceledErrorForbiddenReturnsFalse()
+    {
+        var ex = new HttpRequestException("forbidden", null, HttpStatusCode.Forbidden);
+        Assert.False(RetryHelper.IsTransientOrCanceledError(ex));
+    }
+
+    [Fact]
+    public void IsTransientOrCanceledErrorGenericExceptionReturnsFalse()
+    {
+        var ex = new InvalidOperationException("nope");
+        Assert.False(RetryHelper.IsTransientOrCanceledError(ex));
+    }
+
+    #endregion
 }

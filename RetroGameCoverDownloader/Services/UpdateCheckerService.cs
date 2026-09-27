@@ -71,6 +71,10 @@ public static partial class UpdateCheckerService
                 ReleaseUrl = htmlUrl
             });
         }
+        catch (Exception ex) when (RetryHelper.IsTransientOrCanceledError(ex))
+        {
+            Log.Information(ex, "Update check failed due to a transient network error.");
+        }
         catch (Exception ex)
         {
             Log.Error(ex, "Update checker failed.");

@@ -6,6 +6,7 @@ using System.Text.Json;
 using RetroGameCoverDownloader.Helpers;
 using RetroGameCoverDownloader.Models;
 using RetroGameCoverDownloader.Services;
+using Serilog.Events;
 using Xunit;
 
 namespace RetroGameCoverDownloader.Tests.Services;
@@ -252,6 +253,131 @@ public class GitHubServiceTests
 
     #endregion
 
+    #region Transient Failure Logging Tests
+
+    // MaxRetries = 1 keeps these tests fast and makes the first failure final.
+    private static readonly RetrySettings NoRetrySettings = new()
+    {
+        MaxRetries = 1,
+        BackoffMultiplierSeconds = 0.001
+    };
+
+    [Fact]
+    public async Task GetSystemFilesAsyncTimeoutLogsInformationNotError()
+    {
+        TestModuleInitializer.LogSink.Clear();
+        var system = new SystemConfig($"TimeoutSystem_{Guid.NewGuid():N}", "test-owner", "test-repo", "Named_Boxarts");
+        var timeout = new TaskCanceledException(
+            "The request was canceled due to the configured HttpClient.Timeout of 30 seconds elapsing.",
+            new TimeoutException());
+        var handler = new ThrowingHttpMessageHandler(timeout);
+        var client = new HttpClient(handler);
+        var service = new GitHubService(client, retrySettings: NoRetrySettings);
+
+        var (branch, files) = await service.GetSystemFilesAsync(system);
+
+        Assert.Empty(branch);
+        Assert.Empty(files);
+        Assert.False(
+            TestModuleInitializer.LogSink.ContainsEvent(LogEventLevel.Error, system.SystemName),
+            "A request timeout should be logged at Information level, not Error.");
+    }
+
+    [Fact]
+    public async Task GetSystemFilesAsyncCanceledWithoutTimeoutLogsInformationNotError()
+    {
+        TestModuleInitializer.LogSink.Clear();
+        var system = new SystemConfig($"CanceledSystem_{Guid.NewGuid():N}", "test-owner", "test-repo", "Named_Boxarts");
+        var handler = new ThrowingHttpMessageHandler(new TaskCanceledException("The operation was canceled."));
+        var client = new HttpClient(handler);
+        var service = new GitHubService(client, retrySettings: NoRetrySettings);
+
+        var (branch, files) = await service.GetSystemFilesAsync(system);
+
+        Assert.Empty(branch);
+        Assert.Empty(files);
+        Assert.False(
+            TestModuleInitializer.LogSink.ContainsEvent(LogEventLevel.Error, system.SystemName),
+            "A canceled request should be logged at Information level, not Error.");
+    }
+
+    [Fact]
+    public async Task GetAvailableSystemsAsyncRateLimitWithoutCacheLogsInformationNotError()
+    {
+        TestModuleInitializer.LogSink.Clear();
+        var tempCachePath = Path.Combine(Path.GetTempPath(), $"rgcd_missing_cache_{Guid.NewGuid():N}.json");
+        var handler = new TestHttpMessageHandler(static _ => new HttpResponseMessage(HttpStatusCode.Forbidden));
+        var client = new HttpClient(handler);
+        var service = new GitHubService(client, systemsCacheFilePath: tempCachePath, retrySettings: NoRetrySettings);
+
+        var systems = await service.GetAvailableSystemsAsync();
+
+        Assert.Empty(systems);
+        Assert.False(
+            TestModuleInitializer.LogSink.ContainsEvent(LogEventLevel.Error, "Failed to fetch available systems from GitHub"),
+            "A GitHub rate limit should be logged at Information level, not Error.");
+    }
+
+    [Fact]
+    public async Task GetAvailableSystemsAsyncTimeoutWithoutCacheLogsInformationNotError()
+    {
+        TestModuleInitializer.LogSink.Clear();
+        var tempCachePath = Path.Combine(Path.GetTempPath(), $"rgcd_missing_cache_{Guid.NewGuid():N}.json");
+        var handler = new ThrowingHttpMessageHandler(new TaskCanceledException("timed out", new TimeoutException()));
+        var client = new HttpClient(handler);
+        var service = new GitHubService(client, systemsCacheFilePath: tempCachePath, retrySettings: NoRetrySettings);
+
+        var systems = await service.GetAvailableSystemsAsync();
+
+        Assert.Empty(systems);
+        Assert.False(
+            TestModuleInitializer.LogSink.ContainsEvent(LogEventLevel.Error, "Failed to fetch available systems from GitHub"),
+            "A transient network timeout should be logged at Information level, not Error.");
+    }
+
+    [Fact]
+    public async Task GetSystemFilesLargeRepoFallbackTimeoutLogsInformationNotError()
+    {
+        TestModuleInitializer.LogSink.Clear();
+        var system = new SystemConfig($"LargeRepoSystem_{Guid.NewGuid():N}", "test-owner", "test-repo", "Named_Boxarts");
+        var handler = new TestHttpMessageHandler(request =>
+        {
+            if (request.RequestUri?.ToString().Contains("?recursive=1", StringComparison.OrdinalIgnoreCase) == true)
+                return new HttpResponseMessage(HttpStatusCode.InternalServerError);
+
+            throw new TaskCanceledException("timed out", new TimeoutException());
+        });
+        var client = new HttpClient(handler);
+        var service = new GitHubService(client, retrySettings: NoRetrySettings);
+
+        var (branch, files) = await service.GetSystemFilesAsync(system);
+
+        Assert.Empty(branch);
+        Assert.Empty(files);
+        Assert.False(
+            TestModuleInitializer.LogSink.ContainsEvent(LogEventLevel.Error, "GetSystemFilesLargeRepoFallbackAsync"),
+            "A timeout in the large-repository fallback should be logged at Information level, not Error.");
+    }
+
+    [Fact]
+    public async Task DownloadFileAsyncTimeoutLogsInformationNotError()
+    {
+        TestModuleInitializer.LogSink.Clear();
+        var url = $"https://example.invalid/cover_{Guid.NewGuid():N}.png";
+        var handler = new ThrowingHttpMessageHandler(new TaskCanceledException("timed out", new TimeoutException()));
+        var client = new HttpClient(handler);
+        var service = new GitHubService(client, retrySettings: NoRetrySettings);
+
+        var data = await service.DownloadFileAsync(url);
+
+        Assert.Null(data);
+        Assert.False(
+            TestModuleInitializer.LogSink.ContainsEvent(LogEventLevel.Error, url),
+            "A download timeout should be logged at Information level, not Error.");
+    }
+
+    #endregion
+
     #region Test Helpers
 
     private class TrackingHttpMessageHandler : HttpMessageHandler
@@ -296,7 +422,29 @@ public class GitHubServiceTests
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_responseFactory(request));
+            try
+            {
+                return Task.FromResult(_responseFactory(request));
+            }
+            catch (Exception ex)
+            {
+                return Task.FromException<HttpResponseMessage>(ex);
+            }
+        }
+    }
+
+    private class ThrowingHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Exception _exception;
+
+        public ThrowingHttpMessageHandler(Exception exception)
+        {
+            _exception = exception;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromException<HttpResponseMessage>(_exception);
         }
     }
 
