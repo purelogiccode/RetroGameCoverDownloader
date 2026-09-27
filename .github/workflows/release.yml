@@ -1,0 +1,195 @@
+# Release pipeline for RetroGameCoverDownloader.
+#
+# Flow:
+#   1. verify  - version resolution/validation, build and tests (live GitHub integration
+#                tests are excluded with Category!=Integration).
+#   2. bundles - publishes the framework-dependent single-file executable for win-x64 and
+#                win-arm64 into RetroGameCoverDownloader/bin/Release and zips each one with
+#                ReadMe.md and LICENSE.txt, following the release_<version>_win-<arch>.zip
+#                naming convention used by every published release. The zips are uploaded as
+#                the `release-bundles` workflow artifact and their SHA256 hashes are written
+#                to the run summary so they can be inspected before approval.
+#   3. publish - waits for approval in the protected `release` environment (configure
+#                Settings -> Environments -> release with required reviewers), then creates
+#                or updates the GitHub release and attaches the zips.
+#
+# Cut a release by pushing a tag that matches the csproj version, e.g.:
+#   git tag release_1.5.0 && git push origin release_1.5.0
+# or run the workflow manually with the version input.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'release_*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, must match the csproj (e.g. 1.5.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.version || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - name: Resolve and validate version
+        id: resolve
+        shell: pwsh
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          $version = if ($env:EVENT_NAME -eq 'workflow_dispatch') { $env:INPUT_VERSION } else { $env:REF_NAME -replace '^release_', '' }
+          $version = "$version".Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Invalid version '$version' - expected a three-part version such as 1.5.0." }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Release version: $version"
+
+  verify:
+    name: Verify version, build & tests
+    needs: [version]
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        # 10.0.x, not `global-json-file`: the repo pins `10.0.0` with
+        # rollForward latestMajor, which setup-dotnet cannot resolve.
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            global.json
+
+      - name: Verify csproj version matches
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          [xml]$project = Get-Content -LiteralPath RetroGameCoverDownloader\RetroGameCoverDownloader.csproj
+          $assemblyVersion = $project.Project.PropertyGroup.AssemblyVersion | Where-Object { $_ } | Select-Object -First 1
+          if ($assemblyVersion -ne $env:VERSION) {
+            throw "Version mismatch: release $($env:VERSION) but AssemblyVersion is '$assemblyVersion'. Bump the csproj files first."
+          }
+
+      - name: Restore
+        run: dotnet restore CSharp_RetroGameCoverDownloader.sln
+
+      - name: Build (Release)
+        run: dotnet build CSharp_RetroGameCoverDownloader.sln -c Release --no-restore
+
+      - name: Test (excluding live GitHub integration tests)
+        run: dotnet test CSharp_RetroGameCoverDownloader.sln -c Release --no-build --filter "Category!=Integration"
+
+  bundles:
+    name: Build bundles
+    needs: [version, verify]
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            global.json
+
+      - name: Package the two per-architecture bundles
+        # Writes release_<version>_win-x64.zip and release_<version>_win-arm64.zip into
+        # RetroGameCoverDownloader/bin/Release (the script's default output directory).
+        shell: pwsh
+        run: |
+          .\scripts\package-release.ps1 -Version $env:VERSION -StagingDirectory "${{ runner.temp }}\rgcd-staging" -SkipTests
+
+      - name: Write review summary with checksums
+        shell: pwsh
+        run: |
+          $lines = @('## Bundles ready for review', '', 'Download the **release-bundles** artifact below and inspect the zips before approving the release.', '')
+          Get-ChildItem -LiteralPath 'RetroGameCoverDownloader\bin\Release' -Filter "release_$($env:VERSION)_*.zip" | Sort-Object Name | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+            $lines += ('- `{0}` - {1:N0} bytes - SHA256 `{2}`' -f $_.Name, $_.Length, $hash)
+          }
+          $lines += ''
+          $lines += 'The **Publish release (approval required)** job is waiting in the protected `release` environment.'
+          $lines | Set-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Encoding utf8
+
+      - name: Upload bundles for review
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-bundles
+          path: RetroGameCoverDownloader/bin/Release/release_${{ needs.version.outputs.version }}_*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish release (approval required)
+    needs: [version, bundles]
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Download bundles
+        uses: actions/download-artifact@v8
+        with:
+          name: release-bundles
+          path: bundles
+
+      - name: Verify the two expected bundles are present
+        shell: pwsh
+        run: |
+          $expected = @("release_$($env:VERSION)_win-x64.zip", "release_$($env:VERSION)_win-arm64.zip")
+          foreach ($name in $expected) {
+            if (-not (Test-Path -LiteralPath (Join-Path 'bundles' $name))) { throw "Missing expected bundle: $name" }
+          }
+          Get-ChildItem -LiteralPath bundles -File | Select-Object Name, Length
+
+      - name: Create or update the GitHub release
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          TAG="release_${VERSION}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists - uploading/replacing the two bundles."
+            gh release upload "$TAG" bundles/*.zip --clobber
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            gh release create "$TAG" --target "$RELEASE_SHA" --title "$VERSION" --generate-notes bundles/*.zip
+          else
+            gh release create "$TAG" --verify-tag --title "$VERSION" --generate-notes bundles/*.zip
+          fi
+          echo "Published: $(gh release view "$TAG" --json url --jq .url)"

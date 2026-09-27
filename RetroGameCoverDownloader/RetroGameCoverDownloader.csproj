@@ -9,8 +9,8 @@
         <UseWindowsForms>true</UseWindowsForms>
         <ApplicationIcon>icon\icon.ico</ApplicationIcon>
         <IsPackable>false</IsPackable>
-        <AssemblyVersion>1.4.0</AssemblyVersion>
-        <FileVersion>1.4.0</FileVersion>
+        <AssemblyVersion>1.5.0</AssemblyVersion>
+        <FileVersion>1.5.0</FileVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
@@ -27,7 +27,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Meziantou.Analyzer" Version="3.0.205">
+      <PackageReference Include="Meziantou.Analyzer" Version="3.0.290">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
