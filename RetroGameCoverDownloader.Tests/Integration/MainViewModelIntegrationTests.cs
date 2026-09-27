@@ -13,7 +13,7 @@ namespace RetroGameCoverDownloader.Tests.Integration;
 ///
 /// Prerequisites:
 /// - Internet connection
-/// - GITHUB_TOKEN environment variable (strongly recommended to avoid rate limits)
+/// - GITHUB_TOKEN environment variable (required; the tests fail immediately without it)
 /// </summary>
 [Collection("GitHub Integration")]
 [Trait("Category", "Integration")]
@@ -37,10 +37,10 @@ public class MainViewModelIntegrationTests
         if (isSkipped)
         {
             Assert.Fail($"Tests skipped because systems list could not be fetched: {GitHubIntegrationFixture.FetchError}");
-            return;
         }
 
-        var (_, files) = await GitHubIntegrationFixture.SharedService.GetSystemFilesAsync(system);
+        var (_, files) = await GitHubIntegrationFixture.WithTimeoutAsync(
+            ct => GitHubIntegrationFixture.SharedService.GetSystemFilesAsync(system, ct));
 
         if (files.Count == 0)
         {

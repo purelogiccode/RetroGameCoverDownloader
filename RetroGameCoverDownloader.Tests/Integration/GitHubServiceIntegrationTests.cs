@@ -1,6 +1,5 @@
 using RetroGameCoverDownloader.Models;
 using Xunit;
-using Xunit.Sdk;
 
 namespace RetroGameCoverDownloader.Tests.Integration;
 
@@ -10,7 +9,7 @@ namespace RetroGameCoverDownloader.Tests.Integration;
 ///
 /// Prerequisites:
 /// - Internet connection
-/// - GITHUB_TOKEN environment variable (strongly recommended to avoid rate limits)
+/// - GITHUB_TOKEN environment variable (required; the tests fail immediately without it)
 ///
 /// To run only these tests: dotnet test --filter "Category=Integration"
 /// To exclude these tests: dotnet test --filter "Category!=Integration"
@@ -23,7 +22,7 @@ public class GitHubServiceIntegrationTests
     public void SystemsWereFetched()
     {
         if (GitHubIntegrationFixture.FetchError != null)
-            throw SkipException.ForSkip($"Failed to fetch systems: {GitHubIntegrationFixture.FetchError}");
+            Assert.Fail($"Failed to fetch systems: {GitHubIntegrationFixture.FetchError}");
 
         Assert.NotEmpty(GitHubIntegrationFixture.Systems);
     }
@@ -33,9 +32,10 @@ public class GitHubServiceIntegrationTests
     public async Task GetSystemFilesAsyncReturnsAtLeastOneFile(SystemConfig system, bool isSkipped)
     {
         if (isSkipped)
-            throw SkipException.ForSkip($"Systems list could not be fetched: {GitHubIntegrationFixture.FetchError}");
+            Assert.Fail($"Systems list could not be fetched: {GitHubIntegrationFixture.FetchError}");
 
-        var (branch, files) = await GitHubIntegrationFixture.SharedService.GetSystemFilesAsync(system);
+        var (branch, files) = await GitHubIntegrationFixture.WithTimeoutAsync(
+            ct => GitHubIntegrationFixture.SharedService.GetSystemFilesAsync(system, ct));
 
         if (string.IsNullOrEmpty(branch) || files.Count == 0)
         {
@@ -52,9 +52,10 @@ public class GitHubServiceIntegrationTests
     public async Task DownloadFileAsyncDownloadsRealCoverImage(SystemConfig system, bool isSkipped)
     {
         if (isSkipped)
-            throw SkipException.ForSkip($"Systems list could not be fetched: {GitHubIntegrationFixture.FetchError}");
+            Assert.Fail($"Systems list could not be fetched: {GitHubIntegrationFixture.FetchError}");
 
-        var (branch, files) = await GitHubIntegrationFixture.SharedService.GetSystemFilesAsync(system);
+        var (branch, files) = await GitHubIntegrationFixture.WithTimeoutAsync(
+            ct => GitHubIntegrationFixture.SharedService.GetSystemFilesAsync(system, ct));
 
         if (string.IsNullOrEmpty(branch) || files.Count == 0)
         {
@@ -65,7 +66,8 @@ public class GitHubServiceIntegrationTests
         var encodedPath = string.Join("/", firstFile.Path.Split('/').Select(Uri.EscapeDataString));
         var url = $"https://raw.githubusercontent.com/{system.Owner}/{system.Repo}/{branch}/{encodedPath}";
 
-        var data = await GitHubIntegrationFixture.SharedService.DownloadFileAsync(url);
+        var data = await GitHubIntegrationFixture.WithTimeoutAsync(
+            ct => GitHubIntegrationFixture.SharedService.DownloadFileAsync(url, ct));
 
         Assert.NotNull(data);
         Assert.True(data.Length > 100,

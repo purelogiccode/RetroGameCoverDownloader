@@ -105,10 +105,17 @@ RetroGameCoverDownloader.exe "C:\ROMs" "C:\Covers"
 The project includes a comprehensive test suite using **xunit**:
 
 ```bash
-dotnet test
+dotnet test --filter "Category!=Integration"
 ```
 
 Tests cover models, services, helpers, converters, commands, ViewModels, managers, and integration tests. A `MockBugReportService` is injected via `[ModuleInitializer]` to prevent real API calls during testing.
+
+The integration tests call the live GitHub API and are excluded above. They need a `GITHUB_TOKEN` environment variable to stay within GitHub's rate limits and are skipped without one; to run them:
+
+```bash
+$env:GITHUB_TOKEN = "ghp_your_token"
+dotnet test --filter "Category=Integration"
+```
 
 ## 📄 License
 
