@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using RetroGameCoverDownloader.Helpers;
 using RetroGameCoverDownloader.Services;
+using Serilog.Events;
 using Xunit;
 
 namespace RetroGameCoverDownloader.Tests.Services;
@@ -73,6 +74,39 @@ public class ApplicationStatsServiceTests
         }
     }
 
+    [Fact]
+    public async Task TrackLaunchAsyncTimeoutLogsInformationNotError()
+    {
+        TestModuleInitializer.LogSink.Clear();
+
+        var timeout = new TaskCanceledException(
+            "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+            new TimeoutException());
+        var handler = new ThrowingHttpMessageHandler(timeout);
+        var testClient = new HttpClient(handler);
+
+        var testService = new ApplicationStatsService { HttpClientFactory = () => testClient };
+        var original = ApplicationStatsService.Current;
+        ApplicationStatsService.Current = testService;
+
+        try
+        {
+            var ex = await Record.ExceptionAsync(static () => ApplicationStatsService.TrackLaunchAsync());
+
+            Assert.Null(ex);
+            Assert.True(
+                TestModuleInitializer.LogSink.ContainsEvent(LogEventLevel.Information, "Launch telemetry skipped"),
+                "A telemetry timeout should be logged as an informational message.");
+            Assert.False(
+                TestModuleInitializer.LogSink.ContainsEvent(LogEventLevel.Error, "Launch telemetry"),
+                "A telemetry timeout must not be logged as an error that is forwarded to the bug-report API.");
+        }
+        finally
+        {
+            ApplicationStatsService.Current = original;
+        }
+    }
+
     #endregion
 
     #region Helpers
@@ -93,6 +127,14 @@ public class ApplicationStatsServiceTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             throw new HttpRequestException("Simulated network failure");
+        }
+    }
+
+    private sealed class ThrowingHttpMessageHandler(Exception exception) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            throw exception;
         }
     }
 
