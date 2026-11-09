@@ -36,14 +36,13 @@ public class MainViewModelTests
         public event Action<TimeSpan>? RateLimitHit;
         public event Action? UnauthorizedAccess;
 #pragma warning restore CS0067
-        public Func<CancellationToken, Task<List<SystemConfig>>>? OnGetAvailableSystemsAsync { get; set; }
         public Func<SystemConfig, CancellationToken, Task<(string, List<GitHubTreeItem>)>>? OnGetSystemFilesAsync { get; set; }
         public Func<string, CancellationToken, Task<byte[]?>>? OnDownloadFileAsync { get; set; }
         public bool Disposed { get; private set; }
 
         public Task<List<SystemConfig>> GetAvailableSystemsAsync(CancellationToken cancellationToken = default)
         {
-            return OnGetAvailableSystemsAsync?.Invoke(cancellationToken) ?? Task.FromResult(new List<SystemConfig>());
+            return Task.FromResult(new List<SystemConfig>());
         }
 
         public Task<(string Branch, List<GitHubTreeItem> Files)> GetSystemFilesAsync(SystemConfig system, CancellationToken cancellationToken = default)

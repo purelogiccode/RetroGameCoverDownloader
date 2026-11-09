@@ -234,6 +234,34 @@ public class GitHubServiceTests
     }
 
     [Fact]
+    public async Task GetAvailableSystemsAsyncFallsBackToCacheOn429()
+    {
+        var tempCachePath = Path.Combine(Path.GetTempPath(), $"rgcd_test_cache_{Guid.NewGuid()}.json");
+
+        try
+        {
+            var cachedSystems = new List<SystemConfig>
+            {
+                new("Cached System", "libretro-thumbnails", "Cached_System", "Named_Boxarts")
+            };
+            await File.WriteAllTextAsync(tempCachePath, JsonSerializer.Serialize(cachedSystems));
+
+            var handler = new TestHttpMessageHandler(static _ => new HttpResponseMessage((HttpStatusCode)429));
+            var client = new HttpClient(handler);
+            var service = new GitHubService(client, systemsCacheFilePath: tempCachePath, retrySettings: NoRetrySettings);
+
+            var systems = await service.GetAvailableSystemsAsync();
+
+            Assert.Single(systems);
+            Assert.Equal("Cached System", systems[0].SystemName);
+        }
+        finally
+        {
+            if (File.Exists(tempCachePath)) File.Delete(tempCachePath);
+        }
+    }
+
+    [Fact]
     public void IsTransientErrorReturnsFalseFor403()
     {
         var ex = new HttpRequestException("Forbidden", null, HttpStatusCode.Forbidden);
@@ -299,6 +327,24 @@ public class GitHubServiceTests
         Assert.False(
             TestModuleInitializer.LogSink.ContainsEvent(LogEventLevel.Error, system.SystemName),
             "A canceled request should be logged at Information level, not Error.");
+    }
+
+    [Fact]
+    public async Task GetSystemFilesAsync429LogsInformationNotError()
+    {
+        TestModuleInitializer.LogSink.Clear();
+        var system = new SystemConfig($"TooManyRequestsSystem_{Guid.NewGuid():N}", "test-owner", "test-repo", "Named_Boxarts");
+        var handler = new TestHttpMessageHandler(static _ => new HttpResponseMessage((HttpStatusCode)429));
+        var client = new HttpClient(handler);
+        var service = new GitHubService(client, retrySettings: NoRetrySettings);
+
+        var (branch, files) = await service.GetSystemFilesAsync(system);
+
+        Assert.Empty(branch);
+        Assert.Empty(files);
+        Assert.False(
+            TestModuleInitializer.LogSink.ContainsEvent(LogEventLevel.Error, system.SystemName),
+            "A 429 rate limit should be logged at Information level, not Error.");
     }
 
     [Fact]

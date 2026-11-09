@@ -346,23 +346,6 @@ public partial class MainWindow
         }
     }
 
-    private async void CheckForUpdatesMenuItem_ClickAsync(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            if (DataContext is ViewModels.MainViewModel)
-            {
-                Log.Information("Checking for updates...");
-                await UpdateCheckerService.CheckForUpdateAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Information("Error checking for updates: {Reason}", ex.Message);
-            Log.Error(ex, "Error checking for updates from menu.");
-        }
-    }
-
     private void UpdateHyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
     {
         try

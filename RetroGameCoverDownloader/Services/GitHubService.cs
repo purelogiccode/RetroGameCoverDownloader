@@ -18,6 +18,7 @@ public class GitHubService : IGitHubService
     private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
     private const string MainRepoOwner = "libretro-thumbnails";
     private const string MainRepoName = "libretro-thumbnails";
+    private const HttpStatusCode TooManyRequests = (HttpStatusCode)429;
     private static readonly char[] Separator = ['\r', '\n'];
 
     // Circuit breaker state (thread-safe counters for 503 tracking)
@@ -150,7 +151,7 @@ public class GitHubService : IGitHubService
                     return systems;
                 }
             }
-            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+            catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.Forbidden or TooManyRequests)
             {
                 lastException = ex;
                 Log.Information("{Context}GitHub API rate limit exceeded on branch '{Branch}'. {Reason}", context, branch, ex.Message);
@@ -223,7 +224,7 @@ public class GitHubService : IGitHubService
     {
         return ex is HttpRequestException
         {
-            StatusCode: HttpStatusCode.Forbidden or (HttpStatusCode)429
+            StatusCode: HttpStatusCode.Forbidden or TooManyRequests
         };
     }
 
@@ -360,6 +361,7 @@ public class GitHubService : IGitHubService
                         RaiseUnauthorized();
                         continue;
                     case HttpStatusCode.Forbidden:
+                    case TooManyRequests:
                         Log.Information("{Context}Rate limit exceeded on branch '{Branch}'. {Reason}", context, branch, response.ReasonPhrase);
                         continue;
                     case HttpStatusCode.NotFound:

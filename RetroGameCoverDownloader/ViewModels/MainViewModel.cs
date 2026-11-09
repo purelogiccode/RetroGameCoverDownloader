@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -35,13 +36,23 @@ public class MainViewModel : ViewModelBase, IDisposable
     private readonly StringBuilder _logBuilder = new();
 
     // Commands
+    [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global", Justification = "Bound from MainWindow.xaml.")]
     public RelayCommand BrowseRomCommand { get; }
+
+    [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global", Justification = "Bound from MainWindow.xaml.")]
     public RelayCommand BrowseCoverCommand { get; }
+
     public RelayCommand PrepareCommand { get; }
     public RelayCommand DownloadCommand { get; }
     public RelayCommand CancelCommand { get; }
+
+    [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global", Justification = "Bound from MainWindow.xaml.")]
     public RelayCommand OpenUpdateUrlCommand { get; }
+
+    [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global", Justification = "Bound from MainWindow.xaml.")]
     public RelayCommand DismissUpdateCommand { get; }
+
+    [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global", Justification = "Bound from MainWindow.xaml.")]
     public RelayCommand CheckForUpdatesCommand { get; }
 
     // Update notification
@@ -133,8 +144,8 @@ public class MainViewModel : ViewModelBase, IDisposable
         BrowseRomCommand = new RelayCommand(_ => SelectFolder(path => { RomFolderPath = path; }));
         BrowseCoverCommand = new RelayCommand(_ => SelectFolder(path => { CoverFolderPath = path; }));
 
-        PrepareCommand = new RelayCommand(o => o = ExecutePrepareCommandAsync(), _ => !IsBusy && SelectedSystem != null && !string.IsNullOrEmpty(RomFolderPath) && !string.IsNullOrEmpty(CoverFolderPath));
-        DownloadCommand = new RelayCommand(o => o = ExecuteDownloadCommandAsync(), _ => !IsBusy && ItemsToDownload.Count > 0);
+        PrepareCommand = new RelayCommand(_ => FireAndForget(ExecutePrepareCommandAsync), _ => !IsBusy && SelectedSystem != null && !string.IsNullOrEmpty(RomFolderPath) && !string.IsNullOrEmpty(CoverFolderPath));
+        DownloadCommand = new RelayCommand(_ => FireAndForget(ExecuteDownloadCommandAsync), _ => !IsBusy && ItemsToDownload.Count > 0);
         CancelCommand = new RelayCommand(
             _ => CancelOperation(),
             _ => IsBusy && _cts != null // Add null check to disable button sooner
@@ -151,7 +162,7 @@ public class MainViewModel : ViewModelBase, IDisposable
             UpdateAvailable = false;
         });
 
-        CheckForUpdatesCommand = new RelayCommand(o => o = ExecuteCheckForUpdatesCommandAsync());
+        CheckForUpdatesCommand = new RelayCommand(_ => FireAndForget(ExecuteCheckForUpdatesCommandAsync));
 
         UpdateCheckerService.UpdateAvailable += OnUpdateAvailable;
 
@@ -163,6 +174,13 @@ public class MainViewModel : ViewModelBase, IDisposable
             // Check for updates
             _ = UpdateCheckerService.CheckForUpdateAsync();
         }
+    }
+
+    // The command handlers below catch and log their own exceptions, so discarding
+    // the task here is intentional and does not hide unobserved failures.
+    private static void FireAndForget(Func<Task> operation)
+    {
+        _ = operation();
     }
 
     private async Task ExecutePrepareCommandAsync()

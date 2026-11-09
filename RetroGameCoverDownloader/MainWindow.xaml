@@ -64,7 +64,7 @@
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="_Help" ToolTip="Help and information">
-                <MenuItem Header="_Check for Updates" Click="CheckForUpdatesMenuItem_ClickAsync"
+                <MenuItem Header="_Check for Updates" Command="{Binding CheckForUpdatesCommand}"
                           ToolTip="Check GitHub for a newer version of this application">
                     <MenuItem.Icon>
                         <StaticResource ResourceKey="UpdateIcon" />
