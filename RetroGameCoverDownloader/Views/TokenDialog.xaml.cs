@@ -22,6 +22,7 @@ public partial class TokenDialog : Window
     {
         HasExistingToken = hasExistingToken;
         InitializeComponent();
+        Icon = AppIcons.CreateMainIcon();
 
         if (HasExistingToken)
             ExistingTokenPanel.IsVisible = true;

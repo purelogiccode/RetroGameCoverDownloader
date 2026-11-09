@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using RetroGameCoverDownloader.Helpers;
 using RetroGameCoverDownloader.Managers;
 using RetroGameCoverDownloader.Services;
 using Serilog;
@@ -21,6 +22,7 @@ public partial class ProxySettingsDialog : Window
     public ProxySettingsDialog()
     {
         InitializeComponent();
+        Icon = AppIcons.CreateMainIcon();
         LoadCurrentSettings();
     }
 

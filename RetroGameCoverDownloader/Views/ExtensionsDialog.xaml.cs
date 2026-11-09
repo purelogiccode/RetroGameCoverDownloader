@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Collections.ObjectModel;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using RetroGameCoverDownloader.Helpers;
 using RetroGameCoverDownloader.Managers;
 using RetroGameCoverDownloader.Services;
 using Serilog;
@@ -19,6 +20,7 @@ public partial class ExtensionsDialog : Window
     public ExtensionsDialog()
     {
         InitializeComponent();
+        Icon = AppIcons.CreateMainIcon();
         ExtensionsListBox.ItemsSource = _extensions;
         LoadCurrentExtensions();
     }

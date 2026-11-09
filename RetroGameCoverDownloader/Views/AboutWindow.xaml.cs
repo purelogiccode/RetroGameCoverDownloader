@@ -12,6 +12,7 @@ public partial class AboutWindow : Window
     public AboutWindow()
     {
         InitializeComponent();
+        Icon = AppIcons.CreateMainIcon();
         AppVersionTextBlock.Text = $"Version: {AppInfo.VersionString}";
     }
 

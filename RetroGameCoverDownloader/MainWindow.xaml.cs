@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Platform;
 using MessageBoxIcon = MsBox.Avalonia.Enums.Icon;
 using RetroGameCoverDownloader.Helpers;
 using RetroGameCoverDownloader.Managers;
@@ -29,7 +28,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _viewModel = viewModel;
         DataContext = viewModel;
-        Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://RetroGameCoverDownloader/Assets/logo.png")));
+        Icon = AppIcons.CreateMainIcon();
 
         Opened += OnOpened;
         Closing += OnClosing;
