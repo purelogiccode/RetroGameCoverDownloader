@@ -136,6 +136,7 @@ This project is licensed under the **GPL-3.0 license**.
 
 - **Issues**: [Report Bugs](https://github.com/purelogiccode/RetroGameCoverDownloader/issues)
 - **Discussions**: [Ask Questions](https://github.com/purelogiccode/RetroGameCoverDownloader/discussions)
+- **Security**: [Report a vulnerability privately](SECURITY.md)
 - **Email**: support@purelogiccode.com
 
 ## ⭐ Show Your Support
