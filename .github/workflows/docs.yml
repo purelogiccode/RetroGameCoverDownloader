@@ -1,6 +1,8 @@
 # Builds the documentation site with DocFX, deploys it to GitHub Pages, and mirrors
 # the Markdown sources to the repository wiki.
 #
+# Pull requests build the site as a validation step but do not deploy or touch the wiki.
+#
 # Requirements (see docs/release-process.md):
 #   - Settings -> Pages -> Source: GitHub Actions
 #   - Settings -> Features -> Wikis enabled, with at least one wiki page created so
@@ -16,12 +18,16 @@ on:
       - "docs/**"
       - "scripts/publish-wiki.ps1"
       - ".github/workflows/docs.yml"
+  pull_request:
+    branches: ["master"]
+    paths:
+      - "docs/**"
+      - "scripts/publish-wiki.ps1"
+      - ".github/workflows/docs.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: docs-${{ github.ref }}
@@ -34,6 +40,11 @@ jobs:
   build:
     name: Build documentation
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -50,6 +61,7 @@ jobs:
         run: docfx docs/docfx.json
 
       - name: Configure Pages
+        if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
@@ -59,8 +71,10 @@ jobs:
 
   deploy-pages:
     name: Deploy to GitHub Pages
+    if: github.event_name != 'pull_request'
     needs: [build]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -74,7 +88,12 @@ jobs:
 
   wiki:
     name: Publish wiki
+    if: github.event_name != 'pull_request'
+    needs: [build]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     env:
       WIKI_TOKEN: ${{ secrets.WIKI_TOKEN }}
     steps:
@@ -104,6 +123,14 @@ jobs:
           -SourceDirectory docs
           -WikiDirectory wiki
           -NavigationFile docs/guide/toc.yml
+
+      - name: Verify the wiki has a landing page and lateral menu
+        if: steps.token.outputs.skip != 'true'
+        working-directory: wiki
+        shell: bash
+        run: |
+          test -f Home.md
+          test -f _Sidebar.md
 
       - name: Commit and push
         if: steps.token.outputs.skip != 'true'
