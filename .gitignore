@@ -1,6 +1,7 @@
 bin/
 obj/
 TestResults/
+inspectcode.sarif
 /packages/
 riderModule.iml
 /_ReSharper.Caches/!/RetroGameCoverDownloader/obj/

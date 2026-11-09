@@ -37,7 +37,7 @@ The sources live in the [`docs`](docs) folder and are built and published automa
 🔐 **Token Integration** - Optional GitHub token support for 4,900 downloads/hour (vs 55 without)  
 🔑 **Auto Token Prompt** - Automatically prompts for a new token on 401 Unauthorized errors  
 🔄 **Update Checker** - Automatically notifies you of new versions  
-🐛 **Error Reporting** - Automatic bug reports to help improve the application  
+🐛 **Error Reporting** - Automatic bug reports for actionable errors; transient network failures are ignored\
 ⏹️ **Cancellation Support** - Cancel operations anytime  
 📊 **Progress UI** - Real-time progress bar and status messages  
 🖥️ **CLI Support** - Command-line arguments for automation  
@@ -57,8 +57,8 @@ The sources live in the [`docs`](docs) folder and are built and published automa
 ## 📦 Installation
 
 ### Prerequisites
-- Windows 10 or later
-- .NET 10.0 Runtime (installed automatically with the application)
+- Windows 10 or later (x64 or arm64)
+- .NET 10 Desktop Runtime — Windows offers to download it automatically if it is missing
 
 ### Download
 1. Grab the latest release from the [Releases Page](https://github.com/purelogiccode/RetroGameCoverDownloader/releases)
@@ -127,6 +127,14 @@ dotnet test
 ```
 
 Tests cover models, services, helpers, converters, commands, ViewModels, and managers. A `MockBugReportService` is injected via `[ModuleInitializer]` to prevent real API calls during testing.
+
+## 🔐 Security
+
+- GitHub tokens and proxy passwords are encrypted with Windows DPAPI and never leave your machine.
+- Report vulnerabilities privately through [SECURITY.md](SECURITY.md). Please do not open a public issue
+  for a security problem.
+- The repository uses CodeQL, Dependabot alerts and security updates, secret scanning, and private
+  vulnerability reporting.
 
 ## 📄 License
 

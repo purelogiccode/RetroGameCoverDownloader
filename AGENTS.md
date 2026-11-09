@@ -28,6 +28,10 @@ dotnet restore CSharp_RetroGameCoverDownloader.sln
 dotnet build CSharp_RetroGameCoverDownloader.sln -c Release --no-restore
 dotnet test CSharp_RetroGameCoverDownloader.sln -c Release --no-build
 dotnet run --project RetroGameCoverDownloader
+
+# Static analysis (must report zero warnings and errors)
+jb inspectcode CSharp_RetroGameCoverDownloader.sln `
+  --output=inspectcode.sarif --format=Sarif --severity=WARNING --swea
 ```
 
 - The solution must build with **zero warnings**. Fix analyzer findings; do not suppress them without a
@@ -141,6 +145,7 @@ See [docs/guide/architecture.md](docs/guide/architecture.md) for the full data f
 
 - [ ] `dotnet build CSharp_RetroGameCoverDownloader.sln -c Release` completes with zero warnings.
 - [ ] `dotnet test CSharp_RetroGameCoverDownloader.sln` passes.
+- [ ] `jb inspectcode` reports zero warnings and errors.
 - [ ] New behavior has tests and existing tests still pass offline.
 - [ ] User-facing or configuration changes update `docs/guide/` and `docs/guide/toc.yml`.
 - [ ] `WhatsNew.md` is updated for user-visible changes.

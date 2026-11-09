@@ -64,6 +64,18 @@ dotnet test --filter "FullyQualifiedName~GitHubServiceTests"
 dotnet test --filter "DisplayName~RateLimit"
 ```
 
+## Static analysis
+
+CodeQL runs in CI for the application and the workflows. You can also run JetBrains InspectCode locally:
+
+```powershell
+jb inspectcode CSharp_RetroGameCoverDownloader.sln `
+  --output=inspectcode.sarif --format=Sarif --severity=WARNING --swea
+```
+
+The solution should report **no warnings or errors**. The SARIF report is for local review only and is
+ignored by Git.
+
 ## Code conventions
 
 The codebase is C# with nullable reference types enabled, file-scoped namespaces, and structured logging

@@ -20,7 +20,13 @@ The application uses three-part versions such as `1.5.0`:
 
 1. Checkout and .NET 10 SDK setup (with NuGet cache).
 2. `dotnet restore` and `dotnet build -c Release`.
-3. `dotnet test -c Release` — the full unit test suite. Test results are uploaded as an artifact.
+3. `dotnet test -c Release` — the full unit test suite. Test results and code coverage are uploaded as
+   an artifact.
+
+`.github/workflows/codeql.yml` runs CodeQL analysis for the C# application and the GitHub Actions
+workflows on every push and pull request, plus a weekly scheduled scan. `.github/dependabot.yml` checks
+NuGet packages and actions every week; Dependabot alerts and security updates are enabled in the
+repository settings.
 
 ## Release pipeline
 
