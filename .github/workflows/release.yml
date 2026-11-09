@@ -1,20 +1,18 @@
 # Release pipeline for RetroGameCoverDownloader.
 #
 # Flow:
-#   1. verify  - version resolution/validation, build and tests.
-#   2. bundles - publishes the framework-dependent single-file executable for win-x64 and
-#                win-arm64 into RetroGameCoverDownloader/bin/Release and zips each one with
-#                ReadMe.md and LICENSE.txt, following the release_<version>_win-<arch>.zip
-#                naming convention used by every published release. The zips are uploaded as
-#                the `release-bundles` workflow artifact and their SHA256 hashes are written
-#                to the run summary so they can be inspected before approval.
-#   3. publish - waits for approval in the protected `release` environment (configure
-#                Settings -> Environments -> release with required reviewers), then creates
-#                or updates the GitHub release using WhatsNew.md as the release notes and
-#                attaches the zips.
+#   1. version - resolves and validates the release version.
+#   2. verify  - checks the csproj version, builds, and runs the tests.
+#   3. bundles - publishes self-contained single-file bundles for six targets:
+#                win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64.
+#                Windows bundles are zip files; Linux bundles are tar.gz files;
+#                macOS bundles are tar.gz archives containing a .app bundle.
+#   4. publish - waits for approval in the protected `release` environment, then
+#                creates or updates the GitHub release using WhatsNew.md as notes
+#                and attaches every bundle.
 #
 # Cut a release by pushing a tag that matches the csproj version, e.g.:
-#   git tag release_1.5.0 && git push origin release_1.5.0
+#   git tag release_1.6.0 && git push origin release_1.6.0
 # or run the workflow manually with the version input.
 name: Release
 
@@ -25,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to publish, must match the csproj (e.g. 1.5.0)'
+        description: 'Version to publish, must match the csproj (e.g. 1.6.0)'
         required: true
         type: string
 
@@ -58,7 +56,7 @@ jobs:
         run: |
           $version = if ($env:EVENT_NAME -eq 'workflow_dispatch') { $env:INPUT_VERSION } else { $env:REF_NAME -replace '^release_', '' }
           $version = "$version".Trim()
-          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Invalid version '$version' - expected a three-part version such as 1.5.0." }
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Invalid version '$version' - expected a three-part version such as 1.6.0." }
           "version=$version" >> $env:GITHUB_OUTPUT
           Write-Host "Release version: $version"
 
@@ -103,10 +101,26 @@ jobs:
         run: dotnet test CSharp_RetroGameCoverDownloader.sln -c Release --no-build
 
   bundles:
-    name: Build bundles
+    name: Build ${{ matrix.rid }} bundle
     needs: [version, verify]
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: windows-latest
+            rid: win-arm64
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: ubuntu-latest
+            rid: linux-arm64
+          - os: macos-latest
+            rid: osx-x64
+          - os: macos-latest
+            rid: osx-arm64
     env:
       VERSION: ${{ needs.version.outputs.version }}
     steps:
@@ -122,30 +136,34 @@ jobs:
             **/*.csproj
             global.json
 
-      - name: Package the two per-architecture bundles
-        # Writes release_<version>_win-x64.zip and release_<version>_win-arm64.zip into
-        # RetroGameCoverDownloader/bin/Release (the script's default output directory).
+      - name: Package ${{ matrix.rid }}
+        shell: pwsh
+        run: >
+          ./scripts/package-release.ps1
+          -Version $env:VERSION
+          -Runtimes ${{ matrix.rid }}
+          -OutputDirectory artifacts
+          -StagingDirectory "${{ runner.temp }}/rgcd-staging"
+          -SkipTests
+
+      - name: Write review summary with checksum
         shell: pwsh
         run: |
-          .\scripts\package-release.ps1 -Version $env:VERSION -StagingDirectory "${{ runner.temp }}\rgcd-staging" -SkipTests
+          $bundle = Get-ChildItem -LiteralPath 'artifacts' -File | Select-Object -First 1
+          $hash = (Get-FileHash -LiteralPath $bundle.FullName -Algorithm SHA256).Hash
+          @(
+            '## Bundle ready for review',
+            '',
+            ('- `{0}` - {1:N0} bytes - SHA256 `{2}`' -f $bundle.Name, $bundle.Length, $hash),
+            '',
+            'The **Publish release (approval required)** job is waiting in the protected `release` environment.'
+          ) | Set-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Encoding utf8
 
-      - name: Write review summary with checksums
-        shell: pwsh
-        run: |
-          $lines = @('## Bundles ready for review', '', 'Download the **release-bundles** artifact below and inspect the zips before approving the release.', '')
-          Get-ChildItem -LiteralPath 'RetroGameCoverDownloader\bin\Release' -Filter "release_$($env:VERSION)_*.zip" | Sort-Object Name | ForEach-Object {
-            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
-            $lines += ('- `{0}` - {1:N0} bytes - SHA256 `{2}`' -f $_.Name, $_.Length, $hash)
-          }
-          $lines += ''
-          $lines += 'The **Publish release (approval required)** job is waiting in the protected `release` environment.'
-          $lines | Set-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Encoding utf8
-
-      - name: Upload bundles for review
+      - name: Upload bundle for review
         uses: actions/upload-artifact@v7
         with:
-          name: release-bundles
-          path: RetroGameCoverDownloader/bin/Release/release_${{ needs.version.outputs.version }}_*.zip
+          name: release-${{ matrix.rid }}
+          path: artifacts/*
           if-no-files-found: error
           retention-days: 30
 
@@ -164,20 +182,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Download bundles
+      - name: Download all bundles
         uses: actions/download-artifact@v8
         with:
-          name: release-bundles
+          pattern: release-*
           path: bundles
+          merge-multiple: true
 
-      - name: Verify the two expected bundles are present
-        shell: pwsh
+      - name: Verify the six expected bundles are present
+        shell: bash
         run: |
-          $expected = @("release_$($env:VERSION)_win-x64.zip", "release_$($env:VERSION)_win-arm64.zip")
-          foreach ($name in $expected) {
-            if (-not (Test-Path -LiteralPath (Join-Path 'bundles' $name))) { throw "Missing expected bundle: $name" }
-          }
-          Get-ChildItem -LiteralPath bundles -File | Select-Object Name, Length
+          set -euo pipefail
+          expected=(
+            "release_${VERSION}_win-x64.zip"
+            "release_${VERSION}_win-arm64.zip"
+            "release_${VERSION}_linux-x64.tar.gz"
+            "release_${VERSION}_linux-arm64.tar.gz"
+            "release_${VERSION}_osx-x64.tar.gz"
+            "release_${VERSION}_osx-arm64.tar.gz"
+          )
+          for name in "${expected[@]}"; do
+            if [ ! -f "bundles/$name" ]; then
+              echo "Missing expected bundle: $name" >&2
+              exit 1
+            fi
+          done
+          ls -lh bundles
 
       - name: Create or update the GitHub release
         shell: bash
@@ -188,12 +218,12 @@ jobs:
           set -euo pipefail
           TAG="release_${VERSION}"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists - uploading/replacing the two bundles and updating the notes."
-            gh release upload "$TAG" bundles/*.zip --clobber
+            echo "Release $TAG already exists - uploading/replacing all bundles and updating the notes."
+            gh release upload "$TAG" bundles/* --clobber
             gh release edit "$TAG" --notes-file WhatsNew.md
           elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            gh release create "$TAG" --target "$RELEASE_SHA" --title "$VERSION" --notes-file WhatsNew.md bundles/*.zip
+            gh release create "$TAG" --target "$RELEASE_SHA" --title "$VERSION" --notes-file WhatsNew.md bundles/*
           else
-            gh release create "$TAG" --verify-tag --title "$VERSION" --notes-file WhatsNew.md bundles/*.zip
+            gh release create "$TAG" --verify-tag --title "$VERSION" --notes-file WhatsNew.md bundles/*
           fi
           echo "Published: $(gh release view "$TAG" --json url --jq .url)"

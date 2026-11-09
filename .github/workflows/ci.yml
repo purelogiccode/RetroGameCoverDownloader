@@ -1,5 +1,5 @@
-# Build and test every push to master and every pull request.
-# Release bundles are produced by release.yml (tag push or manual run, with approval).
+# Build and test on Windows, Linux, and macOS, then publish self-contained
+# single-file bundles for x64 and arm64 on every operating system.
 name: CI
 
 on:
@@ -23,9 +23,13 @@ env:
 
 jobs:
   build-test:
-    name: Build & test
-    runs-on: windows-latest
+    name: Build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -59,6 +63,66 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-results
+          name: test-results-${{ matrix.os }}
           path: TestResults
           if-no-files-found: ignore
+
+  publish:
+    name: Publish ${{ matrix.rid }}
+    if: github.event_name != 'pull_request'
+    needs: [build-test]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: windows-latest
+            rid: win-arm64
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: ubuntu-latest
+            rid: linux-arm64
+          - os: macos-latest
+            rid: osx-x64
+          - os: macos-latest
+            rid: osx-arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            global.json
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content (Join-Path 'RetroGameCoverDownloader' 'RetroGameCoverDownloader.csproj')
+          $version = $project.Project.PropertyGroup.AssemblyVersion | Where-Object { $_ } | Select-Object -First 1
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build ${{ matrix.rid }} bundle
+        shell: pwsh
+        run: >
+          ./scripts/package-release.ps1
+          -Version ${{ steps.version.outputs.version }}
+          -Runtimes ${{ matrix.rid }}
+          -OutputDirectory artifacts
+          -StagingDirectory "${{ runner.temp }}/rgcd-staging"
+          -SkipTests
+
+      - name: Upload ${{ matrix.rid }} bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.rid }}
+          path: artifacts/*
+          if-no-files-found: error
