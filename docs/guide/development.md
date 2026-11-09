@@ -41,9 +41,9 @@ token.
 | --- | --- |
 | `RetroGameCoverDownloader` | The WPF application. Key folders: `Commands`, `Converters`, `Helpers`, `Managers`, `Models`, `Services`, `ViewModels`, `Views` |
 | `RetroGameCoverDownloader.Tests` | xUnit tests mirroring the application's folder structure (`Helpers`, `Managers`, `Services`, `ViewModels`, ...) |
-| `docs` | This documentation. Sources are plain Markdown plus `toc.yml` and `docfx.json` |
+| `docs` | This documentation. Sources are plain Markdown plus `toc.yml` and `docfx.json`; `docs/template` customizes the DocFX modern template (dark theme, logo, styling) |
 | `scripts` | `package-release.ps1` (release bundles) and `publish-wiki.ps1` (wiki sync) |
-| `.github/workflows` | `ci.yml` (build + test), `release.yml` (approval-gated release), `docs.yml` (Pages + Wiki) |
+| `.github` | `workflows/ci.yml` (build + test), `workflows/codeql.yml` (code scanning), `workflows/release.yml` (approval-gated release), `workflows/docs.yml` (Pages + Wiki), and `dependabot.yml` |
 
 ## Testing strategy
 
@@ -109,6 +109,14 @@ dotnet tool install --global docfx --version 2.81.0
 docfx docs/docfx.json
 # Output is written to docs/_site
 ```
+
+The site uses a dark theme by default. The customization lives in `docs/template`:
+
+- `public/main.js` sets `defaultTheme: 'dark'` and adds the GitHub icon link.
+- `public/main.css` overrides the Bootstrap color-mode variables and adds the branding accents.
+- `public/logo.png` is the navbar logo.
+- `docs/docfx.json` sets `fileMetadata._disableToc` for `index.md` so the landing page keeps the lateral
+  menu; without it, DocFX hides the sidebar on pages linked directly from the root `toc.yml`.
 
 ## Related pages
 

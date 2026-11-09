@@ -70,12 +70,15 @@ hash of each zip.
 
 ## Documentation pipeline
 
-`.github/workflows/docs.yml` runs when documentation changes are pushed to `master` (and on demand):
+`.github/workflows/docs.yml` runs when documentation changes are pushed to `master`, on pull requests
+that touch documentation (build validation only), and on demand:
 
 1. Builds the DocFX site from `docs/docfx.json`.
 2. Deploys the generated site to **GitHub Pages** at
-   <https://purelogiccode.github.io/RetroGameCoverDownloader/> using the official Pages actions.
-3. Syncs the Markdown sources to the **GitHub Wiki** with `scripts/publish-wiki.ps1`:
+   <https://purelogiccode.github.io/RetroGameCoverDownloader/> using the official Pages actions
+   (push and manual runs only).
+3. Syncs the Markdown sources to the **GitHub Wiki** with `scripts/publish-wiki.ps1`
+   (push and manual runs only) and verifies that `Home.md` and `_Sidebar.md` exist:
    - `index.md` is published as `Home.md`.
    - Pages are flattened into the wiki root and `.md` links are converted to wiki-style links.
    - `_Sidebar.md` is generated from `docs/guide/toc.yml`, giving every wiki page a lateral menu.
