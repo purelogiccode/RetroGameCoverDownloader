@@ -5,7 +5,7 @@ the project's GitHub Actions pipelines.
 
 ## Versioning
 
-The application uses three-part versions such as `1.5.0`:
+The application uses three-part versions such as `2.0.0`:
 
 | Location | Purpose |
 | --- | --- |
@@ -18,10 +18,11 @@ The application uses three-part versions such as `1.5.0`:
 
 `.github/workflows/ci.yml` runs on every push to `master`, every pull request, and on demand:
 
-1. Checkout and .NET 10 SDK setup (with NuGet cache).
+1. Checkout and .NET 10 SDK setup (with NuGet cache) on Windows, Linux, and macOS.
 2. `dotnet restore` and `dotnet build -c Release`.
 3. `dotnet test -c Release` — the full unit test suite. Test results and code coverage are uploaded as
    an artifact.
+4. A publish job builds self-contained bundles for all six RIDs and uploads them as workflow artifacts.
 
 `.github/workflows/codeql.yml` runs CodeQL analysis for the C# application and the GitHub Actions
 workflows on every push and pull request, plus a weekly scheduled scan. `.github/dependabot.yml` checks
@@ -30,39 +31,43 @@ repository settings.
 
 ## Release pipeline
 
-`.github/workflows/release.yml` is triggered by pushing a tag such as `release_1.5.0`, or manually with a
+`.github/workflows/release.yml` is triggered by pushing a tag such as `release_2.0.0`, or manually with a
 version input. It runs four jobs:
 
 | Job | What it does |
 | --- | --- |
 | **version** | Resolves the version from the tag or input and validates the `X.Y.Z` format |
 | **verify** | Fails if `AssemblyVersion` does not match the requested version, then builds and tests the solution |
-| **bundles** | Runs `scripts/package-release.ps1 -SkipTests` to publish the framework-dependent single-file executable for `win-x64` and `win-arm64`, zips each with the documentation, writes SHA256 checksums to the run summary, and uploads the `release-bundles` artifact |
-| **publish** | Waits for approval in the protected `release` environment, downloads the reviewed bundles, verifies both zips are present, and creates or updates the GitHub release with `WhatsNew.md` as the release notes |
+| **bundles** | Runs `scripts/package-release.ps1 -SkipTests` in a six-target matrix to build self-contained bundles for `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, and `osx-arm64`; writes each SHA256 checksum to the run summary and uploads it as an artifact |
+| **publish** | Waits for approval in the protected `release` environment, downloads all six bundles, verifies they are present, and creates or updates the GitHub release with `WhatsNew.md` as the release notes |
 
 ### Bundle contents
 
-Each `release_<version>_win-<arch>.zip` contains:
+Each bundle contains the self-contained single-file application and the documentation:
 
-- `RetroGameCoverDownloader.exe` (framework-dependent single-file publish)
-- `ReadMe.md`
-- `LICENSE.txt`
-- `WhatsNew.md`
+- Windows: `RetroGameCoverDownloader.exe`, `ReadMe.md`, `LICENSE.txt`, `WhatsNew.md` (`.zip`)
+- Linux: `RetroGameCoverDownloader`, `ReadMe.md`, `LICENSE.txt`, `WhatsNew.md` (`.tar.gz`)
+- macOS: `RetroGameCoverDownloader.app` with the documentation in `Contents/Resources` (`.tar.gz`)
+
+No separate .NET runtime is required.
 
 ### Packaging locally
 
 The same script used by CI can be run from a developer machine:
 
 ```powershell
-# Run tests, publish both architectures, and write the zips
-.\scripts\package-release.ps1 -Version 1.5.0
+# Run tests and build all six bundles
+.\scripts\package-release.ps1 -Version 2.0.0
 
 # Skip tests (CI runs them in a separate job) and stage elsewhere
-.\scripts\package-release.ps1 -Version 1.5.0 -SkipTests -StagingDirectory C:\Temp\rgcd-staging
+.\scripts\package-release.ps1 -Version 2.0.0 -SkipTests -StagingDirectory C:\Temp\rgcd-staging
+
+# Build one target
+.\scripts\package-release.ps1 -Version 2.0.0 -Runtimes linux-arm64 -SkipTests
 ```
 
 Bundles are written to `RetroGameCoverDownloader\bin\Release` by default, and the script prints the SHA256
-hash of each zip.
+hash of each archive.
 
 ### Required repository configuration
 
@@ -98,8 +103,8 @@ that touch documentation (build validation only), and on demand:
 4. Push the tag:
 
    ```powershell
-   git tag release_1.5.0
-   git push origin release_1.5.0
+   git tag release_2.0.0
+   git push origin release_2.0.0
    ```
 
    Alternatively, run the **Release** workflow manually and provide the version.

@@ -31,7 +31,7 @@ This page explains every part of the application and the complete cover download
 ### 2. Select a system
 
 The **Select System** list is populated from the libretro-thumbnails repositories. The list is cached under
-`%LocalAppData%\RetroGameCoverDownloader\systems_cache.json`, so it also appears when GitHub is temporarily
+`systems_cache.json` in the application data folder, so it also appears when GitHub is temporarily
 unreachable. Use the system that matches your ROM set — for example *Nintendo - Super Nintendo Entertainment
 System* for SNES ROMs.
 
@@ -113,22 +113,23 @@ Use **✕** to dismiss the banner for the session.
 | File | Proxy Settings | Enable/disable an HTTP proxy and configure host, port, and credentials |
 | File | GitHub Token | Enter or replace your personal access token |
 | File | File Extensions | Choose which file extensions are treated as ROM files |
-| File | Open AppData Path | Opens `%LocalAppData%\RetroGameCoverDownloader` in File Explorer |
+| File | Open AppData Folder | Opens the platform-specific application data folder |
 | File | Exit | Closes the application cleanly |
 | Help | Check for Updates | Queries GitHub for the newest release |
+| Help | Save Screenshot (F8) | Captures the application window |
 | Help | About | Shows version, author, and project links |
 
 ## Screenshots (F8)
 
-Press **F8** at any time to capture the foreground window. Screenshots are saved to
-`%LocalAppData%\RetroGameCoverDownloader\Screenshots` and each capture is logged. This is useful when
-reporting a problem.
+Press **F8** while the application window is focused (or use **Help → Save Screenshot**) to capture the
+window. Screenshots are saved to the `Screenshots` folder in the application data directory, and each
+capture is logged. This is useful when reporting a problem.
 
 ## Log panel
 
 The log panel shows the same structured log that the application writes to disk. It is trimmed automatically
-to keep memory usage bounded. Use **File → Open AppData Path** to open the log folder directly when you need
-to share a log with a developer.
+to keep memory usage bounded. Use **File → Open AppData Folder** to open the log folder directly when you
+need to share a log with a developer.
 
 ## Next steps
 

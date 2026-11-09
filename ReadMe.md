@@ -1,18 +1,21 @@
 [![C#](https://img.shields.io/badge/C%23-.NET%2010.0-blue.svg)](https://dotnet.microsoft.com/)
-[![WPF](https://img.shields.io/badge/WPF-Desktop%20App-blue.svg)](https://docs.microsoft.com/en-us/dotnet/desktop/wpf/)
+[![Avalonia](https://img.shields.io/badge/Avalonia-12.1.6-8A2BE2.svg)](https://avaloniaui.net/)
 [![GitHub](https://img.shields.io/badge/GitHub-API%20Integration-lightgrey.svg)](https://docs.github.com/en/rest)
 [![CI](https://github.com/purelogiccode/RetroGameCoverDownloader/actions/workflows/ci.yml/badge.svg)](https://github.com/purelogiccode/RetroGameCoverDownloader/actions/workflows/ci.yml)
 [![Docs](https://github.com/purelogiccode/RetroGameCoverDownloader/actions/workflows/docs.yml/badge.svg)](https://github.com/purelogiccode/RetroGameCoverDownloader/actions/workflows/docs.yml)
 [![Release](https://img.shields.io/github/v/release/purelogiccode/RetroGameCoverDownloader?label=release&sort=semver)](https://github.com/purelogiccode/RetroGameCoverDownloader/releases)
 [![Downloads](https://img.shields.io/github/downloads/purelogiccode/RetroGameCoverDownloader/total?label=downloads)](https://github.com/purelogiccode/RetroGameCoverDownloader/releases)
 [![License](https://img.shields.io/github/license/purelogiccode/RetroGameCoverDownloader?label=license)](LICENSE.txt)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-0078D6?logo=windows)](https://www.microsoft.com/windows)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D6)](#-installation)
 [![Pages](https://img.shields.io/badge/docs-GitHub%20Pages-2563eb)](https://purelogiccode.github.io/RetroGameCoverDownloader/)
 [![Wiki](https://img.shields.io/badge/docs-GitHub%20Wiki-333333)](https://github.com/purelogiccode/RetroGameCoverDownloader/wiki)
 
 # 🎮 Retro Game Cover Downloader
 
-A sleek, modern WPF application that automatically downloads missing cover art for your retro game ROM collection from the official [libretro-thumbnails](https://github.com/libretro-thumbnails) GitHub repositories.
+A sleek, modern cross-platform desktop application built with **Avalonia** that automatically downloads missing
+cover art for your retro game ROM collection from the official
+[libretro-thumbnails](https://github.com/libretro-thumbnails) GitHub repositories. Runs on **Windows, Linux,
+and macOS** with x64 and arm64 builds.
 
 ## 📖 Overview
 
@@ -43,12 +46,13 @@ The sources live in the [`docs`](docs) folder and are built and published automa
 🖥️ **CLI Support** - Command-line arguments for automation  
 🌐 **Proxy Support** - Configure HTTP proxy with host, port, and authenticated credentials  
 📂 **File Extensions Configuration** - Customize which file extensions are recognized as ROM files  
-🔒 **Settings Encryption** - Tokens and passwords are encrypted using Windows DPAPI  
+🔒 **Settings Encryption** - DPAPI on Windows, AES-GCM with a user-only key file on Linux/macOS\
 🔁 **Retry with Exponential Backoff** - Automatic retry on transient failures with intelligent backoff  
 ⚡ **Circuit Breaker** - Protects against hammering distressed servers during outages  
 💾 **Systems Cache** - Caches the available systems list for faster startup and offline resilience  
-🌙 **Modern UI** - Fluent Design dark theme powered by WPF-UI  
-📸 **Screenshot Hotkey** - Press F8 anytime to capture the app window
+🌙 **Modern UI** - Avalonia Fluent dark theme with a responsive card layout\
+🖥️ **Cross-Platform** - Self-contained x64 and arm64 builds for Windows, Linux, and macOS\
+📸 **Screenshot Hotkey** - Press F8 while the app is focused to capture the window
 
 ## 🖼️ Screenshots
 
@@ -57,13 +61,20 @@ The sources live in the [`docs`](docs) folder and are built and published automa
 ## 📦 Installation
 
 ### Prerequisites
-- Windows 10 or later (x64 or arm64)
-- .NET 10 Desktop Runtime — Windows offers to download it automatically if it is missing
+- **Windows 10 or later**, **Linux** (x64 or arm64), or **macOS 11 or later** (Intel or Apple silicon)
+- No separate .NET runtime is required — release bundles are self-contained
 
 ### Download
 1. Grab the latest release from the [Releases Page](https://github.com/purelogiccode/RetroGameCoverDownloader/releases)
-2. Extract the ZIP file to your desired location
-3. Run `RetroGameCoverDownloader.exe`
+2. Choose the bundle for your OS and architecture:
+   - **Windows x64/arm64**: `release_<version>_win-x64.zip` or `release_<version>_win-arm64.zip`
+   - **Linux x64/arm64**: `release_<version>_linux-x64.tar.gz` or `release_<version>_linux-arm64.tar.gz`
+   - **macOS Intel/Apple silicon**: `release_<version>_osx-x64.tar.gz` or `release_<version>_osx-arm64.tar.gz`
+3. Extract the archive and launch the application:
+   - Windows: run `RetroGameCoverDownloader.exe`
+   - Linux: run `./RetroGameCoverDownloader` (mark it executable if needed)
+   - macOS: open `RetroGameCoverDownloader.app` (right-click → Open the first time if macOS warns
+     about an unsigned app)
 
 ## 🔧 Configuration
 
@@ -97,27 +108,32 @@ RetroGameCoverDownloader.exe --cover "C:\Covers" --rom "C:\ROMs"
 
 # Positional arguments (ROM folder first, then Cover folder)
 RetroGameCoverDownloader.exe "C:\ROMs" "C:\Covers"
+
+# Linux / macOS
+./RetroGameCoverDownloader --rom "/home/me/ROMs" --cover "/home/me/Covers"
 ```
 
 ## 🛠️ Technical Details
 
 ### Architecture
+- **Avalonia UI**: Cross-platform .NET UI with the Fluent dark theme and custom card styling
 - **MVVM Pattern**: Main window uses ViewModels; dialogs use code-behind for simplicity
 - **Async/Await**: Fully asynchronous operations for UI responsiveness
-- **WPF-UI**: Modern Fluent Design dark theme with dynamic resources
 - **Serilog**: Structured logging with buffered UI sink, file sink, and debug output
 - **Rate Limiting**: Custom `RateLimiter` service with event notifications
 - **Error Handling**: Comprehensive logging and bug reporting via BugReportSink
 - **Circuit Breaker**: Tracks consecutive 503 errors and triggers cooldown to avoid hammering distressed servers
 - **Retry Logic**: Exponential backoff with configurable retry attempts
+- **Cross-Platform**: `net10.0` application with self-contained builds for six OS/architecture targets
 
 ### Key Components
 - `MainViewModel`: Core business logic and state management
 - `GitHubService`: Handles all GitHub API interactions
 - `BugReportService` / `BugReportSink`: Automatic error reporting via structured Serilog sink
-- `SettingsManager`: JSON-based settings persistence with DPAPI encryption for sensitive data
+- `SettingsManager`: JSON-based settings persistence with DPAPI (Windows) or AES-GCM (Linux/macOS)
 - `RateLimiter`: Intelligent API request throttling
 - `UpdateCheckerService`: Checks for new application versions
+- `PlatformHelper` / `AppDialogs`: Cross-platform shell and dialog helpers
 
 ### Testing
 The project includes a comprehensive test suite using **xunit**:
@@ -126,11 +142,14 @@ The project includes a comprehensive test suite using **xunit**:
 dotnet test
 ```
 
-Tests cover models, services, helpers, converters, commands, ViewModels, and managers. A `MockBugReportService` is injected via `[ModuleInitializer]` to prevent real API calls during testing.
+Tests cover models, services, helpers, converters, commands, ViewModels, and managers. CI runs the suite on
+Windows, Linux, and macOS. A `MockBugReportService` is injected via `[ModuleInitializer]` to prevent real API
+calls during testing.
 
 ## 🔐 Security
 
-- GitHub tokens and proxy passwords are encrypted with Windows DPAPI and never leave your machine.
+- GitHub tokens and proxy passwords are encrypted at rest: Windows DPAPI on Windows, AES-GCM with a
+  user-only (0600) key file on Linux and macOS. They never leave your machine except to GitHub.
 - Report vulnerabilities privately through [SECURITY.md](SECURITY.md). Please do not open a public issue
   for a security problem.
 - The repository uses CodeQL, Dependabot alerts and security updates, secret scanning, and private

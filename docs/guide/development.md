@@ -6,10 +6,10 @@ This page is for developers who want to build, test, or contribute to Retro Game
 
 | Tool | Notes |
 | --- | --- |
-| Windows 10 or later | The application and its tests target `net10.0-windows` and use WPF |
+| Windows, Linux, or macOS | The application and tests target `net10.0` and use Avalonia |
 | [.NET 10 SDK](https://dotnet.microsoft.com/download) | The repository pins SDK `10.0.0` with a `latestMajor` roll-forward policy in `global.json` |
 | Git | To clone the repository |
-| IDE (optional) | JetBrains Rider or Visual Studio 2022+ with the .NET desktop workload |
+| IDE (optional) | JetBrains Rider, Visual Studio 2022+, or VS Code with the Avalonia extension |
 
 ## Get the code
 
@@ -33,14 +33,30 @@ dotnet test CSharp_RetroGameCoverDownloader.sln
 ```
 
 The solution builds with **zero warnings**. The test suite is fully offline and does not require a GitHub
-token.
+token. CI runs the same build and tests on Windows, Linux, and macOS.
+
+## Cross-platform publish
+
+The release script builds self-contained single-file bundles for all six targets:
+
+```powershell
+# All targets
+./scripts/package-release.ps1 -Version 2.0.0
+
+# One target at a time
+./scripts/package-release.ps1 -Version 2.0.0 -Runtimes linux-arm64 -SkipTests
+```
+
+Supported RIDs are `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, and `osx-arm64`.
+Windows bundles are zip files, Linux bundles are tar.gz files, and macOS bundles contain a `.app` directory.
+Run the script on the target operating system when you need to preserve Unix executable permissions.
 
 ## Project structure
 
 | Project / folder | Contents |
 | --- | --- |
-| `RetroGameCoverDownloader` | The WPF application. Key folders: `Commands`, `Converters`, `Helpers`, `Managers`, `Models`, `Services`, `ViewModels`, `Views` |
-| `RetroGameCoverDownloader.Tests` | xUnit tests mirroring the application's folder structure (`Helpers`, `Managers`, `Services`, `ViewModels`, ...) |
+| `RetroGameCoverDownloader` | The Avalonia application. Key folders: `Assets`, `Commands`, `Converters`, `Helpers`, `Managers`, `Models`, `Services`, `ViewModels`, `Views` |
+| `RetroGameCoverDownloader.Tests` | xUnit tests (also `net10.0`) mirroring the application's folder structure (`Helpers`, `Managers`, `Services`, `ViewModels`, ...) |
 | `docs` | This documentation. Sources are plain Markdown plus `toc.yml` and `docfx.json`; `docs/template` customizes the DocFX modern template (dark theme, logo, styling) |
 | `scripts` | `package-release.ps1` (release bundles) and `publish-wiki.ps1` (wiki sync) |
 | `.github` | `workflows/ci.yml` (build + test), `workflows/codeql.yml` (code scanning), `workflows/release.yml` (approval-gated release), `workflows/docs.yml` (Pages + Wiki), and `dependabot.yml` |

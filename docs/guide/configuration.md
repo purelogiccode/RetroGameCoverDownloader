@@ -5,26 +5,36 @@ unlock higher download limits, support restricted networks, and control how ROM 
 
 ## Settings storage
 
-All settings are stored in a single encrypted file:
+All settings are stored in a single encrypted file. The folder is:
 
-| Item | Location |
+| Platform | Folder |
 | --- | --- |
-| Settings | `%LocalAppData%\RetroGameCoverDownloader\settings.dat` |
-| Systems cache | `%LocalAppData%\RetroGameCoverDownloader\systems_cache.json` |
-| Logs | `%LocalAppData%\RetroGameCoverDownloader\logs\log-<date>.txt` |
-| Error log | `%LocalAppData%\RetroGameCoverDownloader\error.log` |
-| Critical log | `%LocalAppData%\RetroGameCoverDownloader\critical_error.log` |
-| Screenshots | `%LocalAppData%\RetroGameCoverDownloader\Screenshots` |
+| Windows | `%LocalAppData%\RetroGameCoverDownloader` |
+| Linux | `~/.local/share/RetroGameCoverDownloader` |
+| macOS | `~/Library/Application Support/RetroGameCoverDownloader` |
 
-The settings file is encrypted with **Windows DPAPI** (CurrentUser scope): the encryption key is derived from
-your Windows account and never leaves the machine. The file cannot be decrypted by another Windows user or on
-another PC — keep this in mind when migrating your profile.
+Inside that folder:
+
+| Item | File |
+| --- | --- |
+| Settings | `settings.dat` |
+| Settings encryption key (Linux/macOS) | `settings.key` |
+| Systems cache | `systems_cache.json` |
+| Logs | `logs/log-<date>.txt` |
+| Error log | `error.log` |
+| Critical log | `critical_error.log` |
+| Screenshots | `Screenshots/` |
+
+On **Windows**, `settings.dat` is encrypted with **DPAPI** (`CurrentUser` scope): the encryption key is
+derived from your Windows account and never leaves the machine. On **Linux and macOS**, settings are
+encrypted with **AES-GCM** using a randomly generated 256-bit key stored in `settings.key` with user-only
+permissions (0600). Keep the key file with the settings file when migrating a profile.
 
 > **Tip**
-> Use **File → Open AppData Path** in the application to open this folder directly.
+> Use **File → Open AppData Folder** in the application to open this folder directly.
 
-If a legacy `settings.xml` (versions 1.4.0 and earlier) is found next to the executable, it is migrated to
-the new encrypted format automatically on first load.
+If a legacy `settings.xml` (versions 1.4.0 and earlier) is found next to the executable on Windows, it is
+migrated to the new encrypted format automatically on first load.
 
 ## GitHub token
 
@@ -100,8 +110,8 @@ application:
 - **No tracking of your library** — ROM names, cover names, and folder paths stay on your machine. Only error
   diagnostics, which can include such details inside log messages, are reported when an actual error occurs.
 
-Deleting the `%LocalAppData%\RetroGameCoverDownloader` folder removes all local data (settings, cache, logs,
-and screenshots). You can also remove an unwanted token at any time from **File → GitHub Token**.
+Deleting the application data folder listed above removes all local data (settings, encryption key, cache,
+logs, and screenshots). You can also remove an unwanted token at any time from **File → GitHub Token**.
 
 ## Next steps
 

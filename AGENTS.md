@@ -5,9 +5,10 @@ user documentation, start with [ReadMe.md](ReadMe.md) and [`docs/`](docs).
 
 ## Project at a glance
 
-- **What**: Retro Game Cover Downloader — a Windows WPF desktop app that scans a ROM folder and downloads
+- **What**: Retro Game Cover Downloader — a cross-platform desktop app that scans a ROM folder and downloads
   missing box art from the public [libretro-thumbnails](https://github.com/libretro-thumbnails) repositories.
-- **Stack**: C# / .NET 10 (`net10.0-windows`), WPF + WPF-UI, MVVM, Serilog, xUnit.
+- **Stack**: C# / .NET 10 (`net10.0`), Avalonia 12 + Fluent dark theme, MVVM, Serilog, xUnit.
+- **Platforms**: Windows, Linux, and macOS; x64 and arm64 self-contained builds.
 - **Solution**: `CSharp_RetroGameCoverDownloader.sln`
 - **Default branch**: `master`
 - **Version**: `AssemblyVersion` in `RetroGameCoverDownloader/RetroGameCoverDownloader.csproj` (kept in
@@ -15,9 +16,9 @@ user documentation, start with [ReadMe.md](ReadMe.md) and [`docs/`](docs).
 
 ## Prerequisites
 
-- Windows 10 or later
+- Windows, Linux, or macOS
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- PowerShell (the commands below use PowerShell)
+- PowerShell 7 (`pwsh`) or the platform shell equivalents (the commands below use PowerShell)
 
 ## Build, run, and test
 
@@ -32,7 +33,13 @@ dotnet run --project RetroGameCoverDownloader
 # Static analysis (must report zero warnings and errors)
 jb inspectcode CSharp_RetroGameCoverDownloader.sln `
   --output=inspectcode.sarif --format=Sarif --severity=WARNING --swea
+
+# Build a single self-contained target (or omit -Runtimes for all six)
+./scripts/package-release.ps1 -Version 2.0.0 -Runtimes linux-x64 -SkipTests
 ```
+
+CI builds and tests on Windows, Linux, and macOS, and publishes `win-x64`, `win-arm64`, `linux-x64`,
+`linux-arm64`, `osx-x64`, and `osx-arm64` artifacts.
 
 - The solution must build with **zero warnings**. Fix analyzer findings; do not suppress them without a
   documented reason.
@@ -49,8 +56,8 @@ dotnet test --filter "DisplayName~RateLimit"
 
 | Path | Contents |
 | --- | --- |
-| `RetroGameCoverDownloader/` | WPF application (`Commands`, `Converters`, `Helpers`, `Managers`, `Models`, `Services`, `ViewModels`, `Views`) |
-| `RetroGameCoverDownloader.Tests/` | xUnit suite mirroring the app's folder structure |
+| `RetroGameCoverDownloader/` | Avalonia application (`Assets`, `Commands`, `Converters`, `Helpers`, `Managers`, `Models`, `Services`, `ViewModels`, `Views`) |
+| `RetroGameCoverDownloader.Tests/` | xUnit suite (`net10.0`) mirroring the app's folder structure |
 | `docs/` | DocFX documentation published to GitHub Pages and the Wiki |
 | `scripts/` | `package-release.ps1` (release bundles) and `publish-wiki.ps1` (wiki sync) |
 | `.github/` | `workflows/` (`ci.yml`, `codeql.yml`, `release.yml`, `docs.yml`) and `dependabot.yml` |
@@ -63,8 +70,11 @@ dotnet test --filter "DisplayName~RateLimit"
   `IGitHubService` exists so tests can inject a fake.
 - `RateLimiter` enforces the 55/4,900 requests-per-hour window; `RetryHelper` implements exponential backoff
   and transient-failure classification; `GitHubService` tracks consecutive 503s with a circuit breaker.
-- `SettingsManager` persists `%LocalAppData%\RetroGameCoverDownloader\settings.dat` with Windows DPAPI
-  (`CurrentUser` scope plus application entropy) and migrates legacy `settings.xml`.
+- `SettingsManager` persists `settings.dat` with Windows DPAPI (`CurrentUser` scope plus application
+  entropy) on Windows and AES-GCM with a user-only `settings.key` on Linux/macOS. It migrates legacy
+  `settings.xml` on Windows.
+- `AppDialogs` and `PlatformHelper` provide cross-platform message boxes and shell integration. The
+  screenshot service renders the Avalonia window instead of using platform-specific screen APIs.
 - `BugReportService` / `BugReportSink` write `error.log` and forward actionable errors; transient network
   failures, timeouts, rate limits, and cancellations stay informational and are not reported.
 - `ApplicationStatsService` sends anonymous launch telemetry (application id + version only).
@@ -105,7 +115,7 @@ See [docs/guide/architecture.md](docs/guide/architecture.md) for the full data f
 
 - Nullable reference types and implicit usings are enabled; use file-scoped namespaces.
 - Follow the existing naming patterns: `...Service`, `...Manager`, `...ViewModel`, `...Item`.
-- Never block the UI thread and never use `async void` outside WPF event handlers. Marshal UI updates
+- Never block the UI thread and never use `async void` outside Avalonia event handlers. Marshal UI updates
   through the dispatcher seams on `MainViewModel`.
 - Use structured logging (`Log.Information("Loaded {Count} files", count)`), not string interpolation, so
   properties stay queryable.
@@ -146,6 +156,7 @@ See [docs/guide/architecture.md](docs/guide/architecture.md) for the full data f
 - [ ] `dotnet build CSharp_RetroGameCoverDownloader.sln -c Release` completes with zero warnings.
 - [ ] `dotnet test CSharp_RetroGameCoverDownloader.sln` passes.
 - [ ] `jb inspectcode` reports zero warnings and errors.
+- [ ] Platform-specific changes compile for Windows, Linux, and macOS (or CI is running).
 - [ ] New behavior has tests and existing tests still pass offline.
 - [ ] User-facing or configuration changes update `docs/guide/` and `docs/guide/toc.yml`.
 - [ ] `WhatsNew.md` is updated for user-visible changes.

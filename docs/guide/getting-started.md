@@ -6,35 +6,42 @@ This page walks you through installing Retro Game Cover Downloader and downloadi
 
 | Requirement | Details |
 | --- | --- |
-| Operating system | Windows 10 or later (x64 or arm64) |
-| Runtime | .NET 10 Desktop Runtime — Windows prompts you to download it automatically if it is missing |
+| Operating system | Windows 10 or later, Linux (x64 or arm64), or macOS 11 or later (Intel or Apple silicon) |
+| Runtime | None — release bundles are self-contained and include .NET 10 |
 | Network | Internet access to GitHub. A personal access token is recommended but optional |
 | Disk space | A few megabytes for the application plus space for the downloaded cover images |
 
 ## Install
 
 1. Open the [Releases page](https://github.com/purelogiccode/RetroGameCoverDownloader/releases).
-2. Download the bundle that matches your PC:
-   - `release_<version>_win-x64.zip` for the vast majority of Windows PCs.
-   - `release_<version>_win-arm64.zip` for Windows on ARM devices.
-3. Extract the zip to a folder of your choice, for example `C:\Tools\RetroGameCoverDownloader`.
+2. Download the bundle that matches your OS and CPU:
+   - `release_<version>_win-x64.zip` or `release_<version>_win-arm64.zip`
+   - `release_<version>_linux-x64.tar.gz` or `release_<version>_linux-arm64.tar.gz`
+   - `release_<version>_osx-x64.tar.gz` or `release_<version>_osx-arm64.tar.gz`
+3. Extract the archive to a folder of your choice.
 
-Each bundle contains:
+Each Windows bundle contains:
 
 | File | Purpose |
 | --- | --- |
-| `RetroGameCoverDownloader.exe` | The application (framework-dependent single-file executable) |
+| `RetroGameCoverDownloader.exe` | The application (self-contained single-file executable) |
 | `ReadMe.md` | Quick overview and links |
 | `LICENSE.txt` | The GPL-3.0 license text |
 | `WhatsNew.md` | Release highlights for this version |
 
+Linux bundles contain the `RetroGameCoverDownloader` executable and the same documentation. macOS bundles
+contain `RetroGameCoverDownloader.app` with the documentation in `Contents/Resources`.
+
 > **Note**
-> The application is framework-dependent. If the .NET 10 Desktop Runtime is not installed, Windows offers to
-> download it the first time you launch the application.
+> Release bundles are self-contained. No separate .NET runtime is required. On Linux, use a desktop session
+> with X11 or XWayland and the standard font libraries. On macOS, the app is unsigned; right-click the app
+> and choose **Open** the first time if Gatekeeper warns you.
 
 ## First run
 
-1. Double-click `RetroGameCoverDownloader.exe`.
+- **Windows:** double-click `RetroGameCoverDownloader.exe`.
+- **Linux:** run `./RetroGameCoverDownloader` from a terminal (or mark it executable in your file manager).
+- **macOS:** open `RetroGameCoverDownloader.app`.
 2. The application opens with the main window and starts loading the available systems in the background.
    The log panel reports progress; the system list is cached so later starts are instant.
 3. On first launch a **GitHub token** dialog appears. You can skip it, but a token raises the download limit
@@ -60,13 +67,16 @@ The application accepts ROM and cover folders as arguments, which makes it conve
 scripts or shortcuts:
 
 ```powershell
-# Positional arguments: ROM folder first, then cover folder
+# Windows
 RetroGameCoverDownloader.exe "C:\ROMs\SNES" "C:\Covers\SNES"
-
-# Named arguments (both / and -- prefixes are accepted)
 RetroGameCoverDownloader.exe --rom "C:\ROMs" --cover "C:\Covers"
-RetroGameCoverDownloader.exe /rom "C:\ROMs" /cover "C:\Covers"
+
+# Linux / macOS
+./RetroGameCoverDownloader "/home/me/ROMs/SNES" "/home/me/Covers/SNES"
+./RetroGameCoverDownloader --rom "/home/me/ROMs" --cover "/home/me/Covers"
 ```
+
+Both `/rom` and `--rom` prefixes are accepted, along with `/cover` and `--cover`.
 
 Paths passed on the command line are pre-filled in the main window; everything else behaves exactly like a
 normal launch.

@@ -1,7 +1,7 @@
 # Troubleshooting
 
 This page lists the most common problems and how to resolve them. Most issues leave a trace in the log;
-open **File → Open AppData Path** to find the log files described in [Configuration](configuration.md).
+open **File → Open AppData Folder** to find the log files described in [Configuration](configuration.md).
 
 ## The system list is empty
 
@@ -15,8 +15,8 @@ network error.
 2. **Network or proxy problems** — verify your internet connection and, if you use a proxy, check
    [Proxy settings](configuration.md#proxy-settings).
 3. **No network at all** — the application falls back to the cached list at
-   `%LocalAppData%\RetroGameCoverDownloader\systems_cache.json`. If the cache is missing or empty the list
-   cannot be populated until GitHub becomes reachable.
+   `systems_cache.json` in the application data folder (see [Configuration](configuration.md#settings-storage)).
+   If the cache is missing or empty the list cannot be populated until GitHub becomes reachable.
 
 After fixing the cause, restart the application or use **File → GitHub Token** to retry with new credentials.
 
@@ -90,15 +90,16 @@ re-select it with **Set ROM Folder** / **Set Cover Folder**.
 
 ## Settings are not remembered or the file cannot be read
 
-Settings are encrypted with Windows DPAPI scoped to your Windows account. Moving `settings.dat` to another
-user account or another computer makes it unreadable — the application logs a warning and starts with
-defaults. Re-enter the token and proxy settings in that case.
+On Windows, settings are encrypted with DPAPI scoped to your Windows account. Moving `settings.dat` to
+another user account or computer makes it unreadable — the application logs a warning and starts with
+defaults. On Linux/macOS, settings use AES-GCM with `settings.key`; keep both files together when moving a
+profile. If the key is lost, re-enter the token and proxy settings.
 
 ## F8 screenshot does not work
 
-The F8 hotkey is registered globally when the main window opens. If another application already owns F8, the
-log reports **"Failed to register F8 global hotkey"** and the hotkey is unavailable until you close the
-conflicting application and restart. Normal screenshots using Windows tools still work as usual.
+F8 captures the application window while the app is focused. Click inside the window first, then press F8.
+The image is saved in the `Screenshots` folder under the application data path. On macOS, use the system
+screenshot shortcuts if you need to capture other windows.
 
 ## Reporting a problem
 

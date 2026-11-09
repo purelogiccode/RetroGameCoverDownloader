@@ -1,7 +1,8 @@
 # Retro Game Cover Downloader
 
-A modern Windows desktop application that automatically downloads missing cover art for your retro game
-ROM collection from the official [libretro-thumbnails](https://github.com/libretro-thumbnails) repositories.
+A modern cross-platform desktop application that automatically downloads missing cover art for your retro
+game ROM collection from the official [libretro-thumbnails](https://github.com/libretro-thumbnails)
+repositories. Runs on Windows, Linux, and macOS with x64 and arm64 builds.
 
 ![Retro Game Cover Downloader](https://raw.githubusercontent.com/purelogiccode/RetroGameCoverDownloader/master/screenshot.png)
 
@@ -14,13 +15,15 @@ ROM collection from the official [libretro-thumbnails](https://github.com/libret
   4,900 requests/hour when a personal access token is configured (55/hour without).
 - **Resilient networking** — exponential backoff retries, a 503 circuit breaker, branch fallback
   (`main` → `master`), and a Contents API fallback for `raw.githubusercontent.com`.
-- **Secure settings** — your GitHub token and proxy password are encrypted with Windows DPAPI.
-- **Modern interface** — Fluent Design dark theme built on [WPF-UI](https://github.com/lepoco/wpfui).
+- **Secure settings** — GitHub tokens and proxy passwords use Windows DPAPI on Windows and AES-GCM with a
+  user-only key file on Linux/macOS.
+- **Modern interface** — Fluent dark theme built on [Avalonia](https://avaloniaui.net/).
+- **Cross-platform** — self-contained x64 and arm64 builds for Windows, Linux, and macOS.
 - **Diagnostics built in** — structured logging, local error logs, crash reporting, and a background update checker.
 
 ## Get started
 
-1. [Install the application](guide/getting-started.md) on your Windows PC.
+1. [Install the application](guide/getting-started.md) on Windows, Linux, or macOS.
 2. Follow the [User Guide](guide/user-guide.md) to set your folders and download covers.
 3. Configure a [GitHub token](guide/configuration.md) to unlock the full download rate.
 4. Stuck? See [Troubleshooting](guide/troubleshooting.md).

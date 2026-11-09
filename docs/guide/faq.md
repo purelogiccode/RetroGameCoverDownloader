@@ -22,7 +22,8 @@ only downloads these publicly available files.
 
 ### Does it work on macOS or Linux?
 
-No. It is a Windows desktop application built with WPF and the .NET 10 Desktop Runtime.
+Yes. The application is built with Avalonia and runs on Windows, Linux, and macOS. Self-contained x64 and
+arm64 bundles are available for each platform.
 
 ## Usage
 
@@ -62,19 +63,26 @@ show systems offline, but covers cannot be fetched without access to GitHub.
 
 The application checks for new releases at startup and via **Help → Check for Updates**. When an update is
 available, a banner links to the release page. Replace the extracted files with the new bundle — your
-settings are stored separately in `%LocalAppData%` and are preserved.
+settings are stored separately in the application data folder and are preserved.
 
 ## Data and privacy
 
 ### Where are my settings and logs?
 
-Everything lives in `%LocalAppData%\RetroGameCoverDownloader`. Use **File → Open AppData Path** to open the
-folder. See [Configuration](configuration.md#settings-storage) for the full list.
+Everything lives in the platform-specific application data folder:
+
+- Windows: `%LocalAppData%\RetroGameCoverDownloader`
+- Linux: `~/.local/share/RetroGameCoverDownloader`
+- macOS: `~/Library/Application Support/RetroGameCoverDownloader`
+
+Use **File → Open AppData Folder** to open it. See
+[Configuration](configuration.md#settings-storage) for the full list.
 
 ### Is my GitHub token safe?
 
-The token is stored in `settings.dat`, encrypted with Windows DPAPI scoped to your Windows account. It cannot
-be decrypted by another user or on another machine.
+The token is stored in `settings.dat`. Windows uses DPAPI scoped to your Windows account; Linux and macOS use
+AES-GCM with a user-only `settings.key` file. On Windows the file cannot be decrypted by another user or on
+another machine; on Linux/macOS keep `settings.dat` and `settings.key` together.
 
 ### What is sent to the developer?
 
@@ -85,8 +93,8 @@ rate limits, and cancellations are no longer reported. See [Privacy](configurati
 
 ### How do I uninstall the application?
 
-Delete the extracted application folder and, to remove all local data, the
-`%LocalAppData%\RetroGameCoverDownloader` folder.
+Delete the extracted application folder and, to remove all local data, the platform-specific application
+data folder listed above.
 
 ## Troubleshooting shortcuts
 

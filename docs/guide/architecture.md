@@ -7,17 +7,20 @@ system, and which strategies keep it resilient on a rate-limited public API.
 
 ```text
 CSharp_RetroGameCoverDownloader.sln
-├── RetroGameCoverDownloader/            # WPF desktop application (net10.0-windows)
+├── RetroGameCoverDownloader/            # Avalonia desktop application (net10.0)
+│   ├── Assets/                          # App icon, logo, and images
 │   ├── Commands/                        # RelayCommand (ICommand implementation)
-│   ├── Converters/                      # XAML value converters
-│   ├── Helpers/                         # AppInfo, LogContext, RetryHelper
+│   ├── Converters/                      # Avalonia value converters
+│   ├── Helpers/                         # AppInfo, LogContext, RetryHelper, PlatformHelper
 │   ├── Managers/                        # SettingsManager
 │   ├── Models/                          # AppSettings, RetrySettings, SystemConfig, ...
-│   ├── Services/                        # GitHub, logging, bug reports, updates, telemetry
+│   ├── Services/                        # GitHub, logging, dialogs, updates, telemetry
 │   ├── ViewModels/                      # MainViewModel (MVVM)
 │   ├── Views/                           # Dialogs (token, proxy, extensions, about)
-│   └── MainWindow.xaml                  # Main window (FluentWindow)
-├── RetroGameCoverDownloader.Tests/      # xUnit unit test suite
+│   ├── Program.cs                       # Avalonia entry point
+│   ├── App.axaml / App.axaml.cs         # Application, theme, exception handling
+│   └── MainWindow.axaml / .axaml.cs     # Main window
+├── RetroGameCoverDownloader.Tests/      # xUnit unit test suite (net10.0)
 ├── docs/                                # This documentation (DocFX source)
 ├── scripts/                             # Release packaging and docs tooling
 └── .github/workflows/                   # CI, release, and docs pipelines
@@ -31,7 +34,7 @@ dialogs use code-behind for simplicity. The test project references the applicat
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────┐
-│                          MainWindow (WPF-UI)                         │
+│                        MainWindow (Avalonia)                         │
 │  menus · folder pickers · system list · progress · log view          │
 └───────────────────────────────┬──────────────────────────────────────┘
                                 │ data binding + ICommand
@@ -42,7 +45,7 @@ dialogs use code-behind for simplicity. The test project references the applicat
        │               │               │               │
 ┌──────▼──────┐ ┌──────▼──────┐ ┌──────▼───────┐ ┌─────▼──────────┐
 │GitHubService│ │RateLimiter  │ │RetryHelper   │ │SettingsManager │
-│ tree/raw/   │ │ sliding     │ │ backoff +    │ │ DPAPI-encrypted│
+│ tree/raw/   │ │ sliding     │ │ backoff +    │ │ DPAPI / AES-GCM│
 │ contents API│ │ 1-hour window│ │ transient   │ │ settings.dat   │
 └──────┬──────┘ └─────────────┘ │ detection    │ └────────────────┘
        │                        └──────────────┘
@@ -67,15 +70,17 @@ dialogs use code-behind for simplicity. The test project references the applicat
 | `BugReportSink` | `Services/BugReportSink.cs` | Serilog sink that routes Warning/Error events into `BugReportService` |
 | `UiLogSink` / `LogConfig` | `Services/UiLogSink.cs`, `Services/LogConfig.cs` | Buffered UI log sink and Serilog configuration |
 | `ApplicationStatsService` | `Services/ApplicationStatsService.cs` | Anonymous launch telemetry (app id + version) |
-| `ScreenshotService` | `Services/ScreenshotService.cs` | Captures the foreground window for the F8 hotkey |
-| `AppInfo` | `Helpers/AppInfo.cs` | Application name, version, and LocalAppData paths |
+| `ScreenshotService` | `Services/ScreenshotService.cs` | Renders the app window to a PNG for the F8 shortcut |
+| `AppDialogs` | `Services/AppDialogs.cs` | Cross-platform message boxes and confirmation dialogs |
+| `PlatformHelper` | `Helpers/PlatformHelper.cs` | Opens URLs and folders with the native OS handler |
+| `AppInfo` | `Helpers/AppInfo.cs` | Application name, version, and platform-specific data paths |
 
 ## Data flow
 
 ### Startup
 
-1. `App.OnStartup` initializes Serilog (`LogConfig.Initialize`), registers global exception handlers, and
-   fires the anonymous launch telemetry.
+1. `App.OnFrameworkInitializationCompleted` initializes Serilog (`LogConfig.Initialize`), registers Avalonia,
+   AppDomain, and task exception handlers, and fires the anonymous launch telemetry.
 2. Command-line arguments are parsed and passed to the main window's `MainViewModel`.
 3. `MainViewModel` builds a `GitHubService` from the saved settings and starts `LoadSystemsAsync` plus the
    background update check.
@@ -138,7 +143,7 @@ timeouts, and cancellations are logged as informational messages and are not rep
 ## Threading model
 
 - All network and file scanning work is asynchronous (`async`/`await`); folder scans run on the thread pool.
-- `MainViewModel` marshals collection and property updates to the WPF dispatcher.
+- `MainViewModel` marshals collection and property updates through Avalonia's `Dispatcher.UIThread`.
 - Cancellation uses a `CancellationTokenSource` created per operation; the UI can cancel preparation or
   download at any time.
 - When the token or proxy changes, a new `GitHubService` is created and the old one is queued for disposal
@@ -155,8 +160,8 @@ Code ──Serilog──▶ LogConfig ──▶ File sink (logs/log-<date>.txt, 
                                                               └─▶ report endpoint
 ```
 
-Global handlers in `App.xaml.cs` catch dispatcher, AppDomain, and unobserved task exceptions and report them
-synchronously before the process exits. Failures inside the reporting pipeline itself are appended to
+Global handlers in `App.axaml.cs` catch Avalonia dispatcher, AppDomain, and unobserved task exceptions and
+report them before the process exits. Failures inside the reporting pipeline itself are appended to
 `critical_error.log` as a last resort.
 
 ## Related pages
