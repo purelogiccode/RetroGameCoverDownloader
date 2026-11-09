@@ -37,31 +37,42 @@ public partial class MainWindow : Window
 
     private async void OnOpened(object? sender, EventArgs e)
     {
-        if (_viewModel.HasGitHubToken)
-            return;
-
         try
         {
-            var dialog = new TokenDialog();
-            if (await dialog.ShowDialog<bool>(this))
-            {
-                try
-                {
-                    var settings = SettingsManager.LoadSettings();
-                    settings.GitHubToken = dialog.Token;
-                    SettingsManager.SaveSettings(settings);
+            if (_viewModel.HasGitHubToken)
+                return;
 
-                    _viewModel.UpdateToken(dialog.Token);
-                    Log.Information("[MainWindow.OnOpened] GitHub token saved successfully.");
-                }
-                catch (Exception ex)
+            try
+            {
+                var dialog = new TokenDialog();
+                if (await dialog.ShowDialog<bool>(this))
                 {
-                    await AppDialogs.ShowMessageAsync(
-                        "Failed to save token. The application may have limited functionality.",
-                        "Warning",
-                        MessageBoxIcon.Warning);
-                    Log.Error(ex, "Failed to save token after dialog.");
+                    try
+                    {
+                        var settings = SettingsManager.LoadSettings();
+                        settings.GitHubToken = dialog.Token;
+                        SettingsManager.SaveSettings(settings);
+
+                        _viewModel.UpdateToken(dialog.Token);
+                        Log.Information("[MainWindow.OnOpened] GitHub token saved successfully.");
+                    }
+                    catch (Exception ex)
+                    {
+                        await AppDialogs.ShowMessageAsync(
+                            "Failed to save token. The application may have limited functionality.",
+                            "Warning",
+                            MessageBoxIcon.Warning);
+                        Log.Error(ex, "Failed to save token after dialog.");
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                await AppDialogs.ShowMessageAsync(
+                    "An error occurred during startup. Some features may not work correctly.",
+                    "Startup Error",
+                    MessageBoxIcon.Warning);
+                Log.Error(ex, "Exception during token check on window load.");
             }
         }
         catch (Exception ex)
@@ -109,7 +120,14 @@ public partial class MainWindow : Window
 
     private async void ScreenshotMenuItem_Click(object? sender, RoutedEventArgs e)
     {
-        await CaptureScreenshotAsync();
+        try
+        {
+            await CaptureScreenshotAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in method ScreenshotMenuItem_Click");
+        }
     }
 
     private void CaptureScreenshot()
@@ -147,8 +165,15 @@ public partial class MainWindow : Window
 
     private async void ExitMenuItem_Click(object? sender, RoutedEventArgs e)
     {
-        await Task.CompletedTask;
-        Close();
+        try
+        {
+            await Task.CompletedTask;
+            Close();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in method ExitMenuItem_Click");
+        }
     }
 
     private async void OpenAppDataPathMenuItem_Click(object? sender, RoutedEventArgs e)

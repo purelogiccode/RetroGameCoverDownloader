@@ -44,41 +44,55 @@ public partial class ExtensionsDialog : Window
 
     private async void AddButton_Click(object? sender, RoutedEventArgs e)
     {
-        var input = NewExtensionBox.Text?.Trim() ?? "";
-
-        if (string.IsNullOrWhiteSpace(input))
+        try
         {
-            await AppDialogs.ShowMessageAsync("Please enter a file extension.", "Validation Error", MsBox.Avalonia.Enums.Icon.Warning);
+            var input = NewExtensionBox.Text?.Trim() ?? "";
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                await AppDialogs.ShowMessageAsync("Please enter a file extension.", "Validation Error", MsBox.Avalonia.Enums.Icon.Warning);
+                NewExtensionBox.Focus();
+                return;
+            }
+
+            if (!input.StartsWith('.'))
+                input = "." + input;
+
+            input = input.ToLowerInvariant();
+
+            if (_extensions.Any(ext => string.Equals(ext, input, StringComparison.OrdinalIgnoreCase)))
+            {
+                await AppDialogs.ShowMessageAsync("This extension is already in the list.", "Duplicate");
+                NewExtensionBox.Focus();
+                return;
+            }
+
+            _extensions.Add(input);
+            NewExtensionBox.Text = "";
             NewExtensionBox.Focus();
-            return;
         }
-
-        if (!input.StartsWith('.'))
-            input = "." + input;
-
-        input = input.ToLowerInvariant();
-
-        if (_extensions.Any(ext => string.Equals(ext, input, StringComparison.OrdinalIgnoreCase)))
+        catch (Exception ex)
         {
-            await AppDialogs.ShowMessageAsync("This extension is already in the list.", "Duplicate");
-            NewExtensionBox.Focus();
-            return;
+            Log.Error(ex, "Error in method AddButton_Click");
         }
-
-        _extensions.Add(input);
-        NewExtensionBox.Text = "";
-        NewExtensionBox.Focus();
     }
 
     private async void RemoveButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (ExtensionsListBox.SelectedItem is string selected)
+        try
         {
-            _extensions.Remove(selected);
-            return;
-        }
+            if (ExtensionsListBox.SelectedItem is string selected)
+            {
+                _extensions.Remove(selected);
+                return;
+            }
 
-        await AppDialogs.ShowMessageAsync("Please select an extension to remove.", "No Selection");
+            await AppDialogs.ShowMessageAsync("Please select an extension to remove.", "No Selection");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in method RemoveButton_Click");
+        }
     }
 
     private void ResetButton_Click(object? sender, RoutedEventArgs e)
