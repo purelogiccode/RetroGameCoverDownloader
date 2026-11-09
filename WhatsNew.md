@@ -1,6 +1,12 @@
-# What's New in 2.0.1
+# What's New in 2.0.2
 
-## About Window Fix
+## Maintenance Release
+- Re-validated the solution with JetBrains InspectCode: **zero warnings and errors**.
+- The full unit test suite passes on Windows, Linux, and macOS.
+- No functional changes; this release republishes the 2.0.1 code with refreshed build metadata and bundles.
+- Includes the 2.0.1 About window icon and layout fix.
+
+## About Window Fix (2.0.1)
 - The About window now uses the same application icon as the main window.
 - The About layout is tighter and vertically centered, with a smaller logo and less empty space.
 
@@ -48,4 +54,4 @@
 - Safer async command handling, invariant-culture parsing, and improved startup diagnostics.
 - Multi-page documentation on GitHub Pages and the Wiki, with a dark theme and lateral menu.
 
-**Full Changelog**: https://github.com/purelogiccode/RetroGameCoverDownloader/compare/release_2.0.0...release_2.0.1
+**Full Changelog**: https://github.com/purelogiccode/RetroGameCoverDownloader/compare/release_2.0.1...release_2.0.2

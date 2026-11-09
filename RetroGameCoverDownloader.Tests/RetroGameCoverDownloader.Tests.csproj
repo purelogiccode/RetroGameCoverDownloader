@@ -5,11 +5,11 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <IsPackable>false</IsPackable>
-        <Version>2.0.1</Version>
-        <InformationalVersion>2.0.1</InformationalVersion>
+        <Version>2.0.2</Version>
+        <InformationalVersion>2.0.2</InformationalVersion>
         <Company>PureLogicCode.com</Company>
-        <AssemblyVersion>2.0.1</AssemblyVersion>
-        <FileVersion>2.0.1</FileVersion>
+        <AssemblyVersion>2.0.2</AssemblyVersion>
+        <FileVersion>2.0.2</FileVersion>
         <NeutralLanguage>en</NeutralLanguage>
     </PropertyGroup>
 

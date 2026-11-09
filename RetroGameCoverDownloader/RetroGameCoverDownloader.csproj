@@ -8,10 +8,10 @@
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <ApplicationIcon>Assets/icon.ico</ApplicationIcon>
         <IsPackable>false</IsPackable>
-        <Version>2.0.1</Version>
-        <InformationalVersion>2.0.1</InformationalVersion>
-        <AssemblyVersion>2.0.1</AssemblyVersion>
-        <FileVersion>2.0.1</FileVersion>
+        <Version>2.0.2</Version>
+        <InformationalVersion>2.0.2</InformationalVersion>
+        <AssemblyVersion>2.0.2</AssemblyVersion>
+        <FileVersion>2.0.2</FileVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
