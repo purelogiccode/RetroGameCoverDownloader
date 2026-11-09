@@ -9,6 +9,9 @@ namespace RetroGameCoverDownloader.Tests.ViewModels;
 
 public class MainViewModelTests
 {
+    private static readonly string RomFolder = Path.Combine(Path.GetTempPath(), "rgcd-test-roms");
+    private static readonly string CoverFolder = Path.Combine(Path.GetTempPath(), "rgcd-test-covers");
+
     #region Helpers
 
     private static TestableMainViewModel CreateViewModel(AppSettings? settings = null, IGitHubService? service = null)
@@ -120,8 +123,8 @@ public class MainViewModelTests
     {
         var vm = CreateViewModel();
         vm.IsBusy = false;
-        vm.RomFolderPath = @"C:\Roms";
-        vm.CoverFolderPath = @"C:\Covers";
+        vm.RomFolderPath = RomFolder;
+        vm.CoverFolderPath = CoverFolder;
         vm.SelectedSystem = new SystemConfig("NES", "owner", "repo", "Named_Boxarts");
 
         Assert.True(vm.PrepareCommand.CanExecute(null));
@@ -132,8 +135,8 @@ public class MainViewModelTests
     {
         var vm = CreateViewModel();
         vm.IsBusy = true;
-        vm.RomFolderPath = @"C:\Roms";
-        vm.CoverFolderPath = @"C:\Covers";
+        vm.RomFolderPath = RomFolder;
+        vm.CoverFolderPath = CoverFolder;
         vm.SelectedSystem = new SystemConfig("NES", "owner", "repo", "Named_Boxarts");
 
         Assert.False(vm.PrepareCommand.CanExecute(null));
@@ -145,7 +148,7 @@ public class MainViewModelTests
         var vm = CreateViewModel();
         vm.IsBusy = false;
         vm.RomFolderPath = "";
-        vm.CoverFolderPath = @"C:\Covers";
+        vm.CoverFolderPath = CoverFolder;
         vm.SelectedSystem = new SystemConfig("NES", "owner", "repo", "Named_Boxarts");
 
         Assert.False(vm.PrepareCommand.CanExecute(null));
@@ -156,8 +159,8 @@ public class MainViewModelTests
     {
         var vm = CreateViewModel();
         vm.IsBusy = false;
-        vm.RomFolderPath = @"C:\Roms";
-        vm.CoverFolderPath = @"C:\Covers";
+        vm.RomFolderPath = RomFolder;
+        vm.CoverFolderPath = CoverFolder;
         vm.SelectedSystem = null;
 
         Assert.False(vm.PrepareCommand.CanExecute(null));
@@ -229,8 +232,8 @@ public class MainViewModelTests
     {
         var vm = CreateViewModel();
         vm.DirectoryExistsOverride = static _ => false;
-        vm.RomFolderPath = @"C:\Roms";
-        vm.CoverFolderPath = @"C:\Covers";
+        vm.RomFolderPath = RomFolder;
+        vm.CoverFolderPath = CoverFolder;
         vm.SelectedSystem = new SystemConfig("NES", "owner", "repo", "Named_Boxarts");
 
         await vm.PrepareDownloadAsync();
@@ -244,10 +247,10 @@ public class MainViewModelTests
     {
         var fake = new FakeGitHubService();
         var vm = CreateViewModel(service: fake);
-        vm.RomFolderPath = @"C:\Roms";
-        vm.CoverFolderPath = @"C:\Covers";
-        vm.FilesByPath[vm.RomFolderPath] = [@"C:\Roms\Game1.nes"];
-        vm.FilesByPath[vm.CoverFolderPath] = [@"C:\Covers\Game1.png"];
+        vm.RomFolderPath = RomFolder;
+        vm.CoverFolderPath = CoverFolder;
+        vm.FilesByPath[vm.RomFolderPath] = [Path.Combine(RomFolder, "Game1.nes")];
+        vm.FilesByPath[vm.CoverFolderPath] = [Path.Combine(CoverFolder, "Game1.png")];
         vm.SelectedSystem = new SystemConfig("NES", "owner", "repo", "Named_Boxarts");
 
         fake.OnGetSystemFilesAsync = static (_, _) => Task.FromResult(("main", new List<GitHubTreeItem>
@@ -266,9 +269,9 @@ public class MainViewModelTests
     {
         var fake = new FakeGitHubService();
         var vm = CreateViewModel(service: fake);
-        vm.RomFolderPath = @"C:\Roms";
-        vm.CoverFolderPath = @"C:\Covers";
-        vm.FilesByPath[vm.RomFolderPath] = [@"C:\Roms\Super Mario Bros.nes"];
+        vm.RomFolderPath = RomFolder;
+        vm.CoverFolderPath = CoverFolder;
+        vm.FilesByPath[vm.RomFolderPath] = [Path.Combine(RomFolder, "Super Mario Bros.nes")];
         vm.FilesByPath[vm.CoverFolderPath] = [];
         vm.SelectedSystem = new SystemConfig("NES", "owner", "repo", "Named_Boxarts");
 
@@ -291,9 +294,9 @@ public class MainViewModelTests
     {
         var fake = new FakeGitHubService();
         var vm = CreateViewModel(service: fake);
-        vm.RomFolderPath = @"C:\Roms";
-        vm.CoverFolderPath = @"C:\Covers";
-        vm.FilesByPath[vm.RomFolderPath] = [@"C:\Roms\Game1.nes"];
+        vm.RomFolderPath = RomFolder;
+        vm.CoverFolderPath = CoverFolder;
+        vm.FilesByPath[vm.RomFolderPath] = [Path.Combine(RomFolder, "Game1.nes")];
         vm.FilesByPath[vm.CoverFolderPath] = [];
         vm.SelectedSystem = new SystemConfig("NES", "owner", "repo", "Named_Boxarts");
 
@@ -324,7 +327,7 @@ public class MainViewModelTests
     {
         var fake = new FakeGitHubService();
         var vm = CreateViewModel(service: fake);
-        vm.CoverFolderPath = @"C:\Covers";
+        vm.CoverFolderPath = CoverFolder;
         vm.ItemsToDownload.Add(new CoverDownloadItem
         {
             GameName = "Super Mario Bros",
@@ -337,7 +340,7 @@ public class MainViewModelTests
         await vm.DownloadCoversAsync();
 
         Assert.Single(vm.WrittenFiles);
-        Assert.Equal(new byte[] { 1, 2, 3 }, vm.WrittenFiles[@"C:\Covers\Super Mario Bros.png"]);
+        Assert.Equal(new byte[] { 1, 2, 3 }, vm.WrittenFiles[Path.Combine(CoverFolder, "Super Mario Bros.png")]);
         Assert.Equal(1, vm.ProgressValue);
         Assert.False(vm.IsBusy);
     }
@@ -347,7 +350,7 @@ public class MainViewModelTests
     {
         var fake = new FakeGitHubService();
         var vm = CreateViewModel(service: fake);
-        vm.CoverFolderPath = @"C:\Covers";
+        vm.CoverFolderPath = CoverFolder;
         vm.AvailableFreeSpace = 0;
         vm.ItemsToDownload.Add(new CoverDownloadItem
         {
@@ -369,7 +372,7 @@ public class MainViewModelTests
     {
         var fake = new FakeGitHubService();
         var vm = CreateViewModel(service: fake);
-        vm.CoverFolderPath = @"C:\Covers";
+        vm.CoverFolderPath = CoverFolder;
         vm.ItemsToDownload.Add(new CoverDownloadItem
         {
             GameName = "Super Mario Bros",
