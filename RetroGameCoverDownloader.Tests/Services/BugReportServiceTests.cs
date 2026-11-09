@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Net;
-using System.Net.Http;
 using RetroGameCoverDownloader.Services;
 using Xunit;
 
@@ -91,7 +90,7 @@ public class BugReportServiceTests
 
     /// <summary>
     /// A SynchronizationContext that executes posted callbacks on the thread that calls <see cref="Run"/>.
-    /// This closely mimics a WPF Dispatcher or Windows Forms message loop.
+    /// This closely mimics an Avalonia dispatcher or another UI message loop.
     /// </summary>
     private class SingleThreadSynchronizationContext : SynchronizationContext, IDisposable
     {

@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http;
 using System.Text.Json;
 using RetroGameCoverDownloader.Helpers;
 using RetroGameCoverDownloader.Services;

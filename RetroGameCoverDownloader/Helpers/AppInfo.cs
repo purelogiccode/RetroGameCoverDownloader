@@ -1,4 +1,3 @@
-using System.IO;
 using System.Reflection;
 
 namespace RetroGameCoverDownloader.Helpers;
@@ -13,9 +12,20 @@ public static class AppInfo
 
     public static string VersionString => VersionCache?.ToString() ?? "Unknown";
 
-    public static string LocalAppDataFolderPath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        AppName);
+    public static string LocalAppDataFolderPath { get; } = Path.Combine(GetAppDataRoot(), AppName);
+
+    private static string GetAppDataRoot()
+    {
+        if (OperatingSystem.IsMacOS())
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "Library",
+                "Application Support");
+        }
+
+        return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+    }
 
     public static string LogsFolderPath { get; } = Path.Combine(LocalAppDataFolderPath, "logs");
 

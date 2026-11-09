@@ -1,6 +1,4 @@
-using System.IO;
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text.Json;
@@ -48,7 +46,7 @@ public class GitHubService : IGitHubService
         }
     }
 
-    private static readonly string SystemsCacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RetroGameCoverDownloader");
+    private static readonly string SystemsCacheDirectory = AppInfo.LocalAppDataFolderPath;
     private static readonly string DefaultSystemsCacheFilePath = Path.Combine(SystemsCacheDirectory, "systems_cache.json");
 
     private readonly string _systemsCacheFilePath;

@@ -1,59 +1,59 @@
-using System.Windows;
-using System.Windows.Navigation;
+using System.Diagnostics.CodeAnalysis;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using RetroGameCoverDownloader.Helpers;
 using RetroGameCoverDownloader.Services;
 using Serilog;
-using MessageBox = System.Windows.MessageBox;
 
 namespace RetroGameCoverDownloader.Views;
 
-public partial class TokenDialog
+[SuppressMessage("ReSharper", "UnusedMember.Local", Justification = "Event handlers are wired from TokenDialog.axaml.")]
+[SuppressMessage("ReSharper", "UnusedParameter.Local", Justification = "Event handlers are wired from TokenDialog.axaml.")]
+public partial class TokenDialog : Window
 {
     public string Token { get; private set; } = "";
-
     public bool HasExistingToken { get; }
 
-    public TokenDialog(bool hasExistingToken = false)
+    public TokenDialog() : this(false)
+    {
+    }
+
+    public TokenDialog(bool hasExistingToken)
     {
         HasExistingToken = hasExistingToken;
         InitializeComponent();
 
         if (HasExistingToken)
-        {
-            ExistingTokenPanel.Visibility = Visibility.Visible;
-            TokenBox.Focus();
-        }
+            ExistingTokenPanel.IsVisible = true;
+
+        Opened += (_, _) => TokenBox.Focus();
     }
 
-    private void SaveButton_Click(object sender, RoutedEventArgs e)
+    private void SaveButton_Click(object? sender, RoutedEventArgs e)
     {
         try
         {
-            var entered = TokenBox.Password.Trim();
-            if (string.IsNullOrEmpty(entered) && HasExistingToken)
-            {
-                Token = "";
-                DialogResult = true;
-                return;
-            }
-
+            var entered = TokenBox.Text?.Trim() ?? "";
             Token = entered;
-            DialogResult = true;
+            Close(true);
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Failed to save token.");
-            MessageBox.Show("An error occurred while saving the token. Please try again.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _ = AppDialogs.ShowMessageAsync(
+                "An error occurred while saving the token. Please try again.",
+                "Error",
+                MsBox.Avalonia.Enums.Icon.Error);
         }
     }
 
-    private void CancelButton_Click(object sender, RoutedEventArgs e)
+    private void CancelButton_Click(object? sender, RoutedEventArgs e)
     {
-        DialogResult = false;
+        Close(false);
     }
 
-    private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    private void GitHubTokenLink_Click(object? sender, RoutedEventArgs e)
     {
-        e.Handled = true;
-        UpdateCheckerService.OpenUrlInBrowser(e.Uri.AbsoluteUri);
+        PlatformHelper.OpenUrl("https://github.com/settings/tokens/new");
     }
 }

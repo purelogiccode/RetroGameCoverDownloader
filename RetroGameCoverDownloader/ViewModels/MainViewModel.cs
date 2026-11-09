@@ -2,17 +2,17 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.IO;
 using System.Text;
-using System.Windows.Input;
-using System.Windows.Threading;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
+using Avalonia.Threading;
+using MsBox.Avalonia.Enums;
 using RetroGameCoverDownloader.Commands;
 using RetroGameCoverDownloader.Helpers;
 using RetroGameCoverDownloader.Managers;
 using RetroGameCoverDownloader.Models;
 using RetroGameCoverDownloader.Services;
-using Application = System.Windows.Application;
-using MessageBox = System.Windows.MessageBox;
 using Serilog;
 
 namespace RetroGameCoverDownloader.ViewModels;
@@ -357,57 +357,61 @@ public class MainViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            InvokeOnDispatcherAsync(() =>
-            {
-                try
-                {
-                    Log.Information("[OnUnauthorizedAccess] GitHub returned 401 Unauthorized. Prompting for token...");
-                    MessageBox.Show(
-                        "GitHub returned a 401 Unauthorized error.\n\n" +
-                        "Your GitHub token may be missing, invalid, or expired.\n" +
-                        "Please enter a valid Personal Access Token to continue.",
-                        "GitHub Authentication Required",
-                        System.Windows.MessageBoxButton.OK,
-                        System.Windows.MessageBoxImage.Warning);
-
-                    var dialog = new Views.TokenDialog(HasGitHubToken) { Owner = Application.Current.MainWindow };
-                    if (dialog.ShowDialog() == true)
-                    {
-                        if (!string.IsNullOrEmpty(dialog.Token))
-                        {
-                            var settings = SettingsManager.LoadSettings();
-                            settings.GitHubToken = dialog.Token;
-                            SettingsManager.SaveSettings(settings);
-
-                            UpdateToken(dialog.Token);
-                            Log.Information("[OnUnauthorizedAccess] New GitHub token saved and applied.");
-
-                            // Recover automatically so the user doesn't have to work out that
-                            // the previous request silently failed: reload the systems list with
-                            // the new token. This is safe against the stale in-flight request
-                            // because LoadSystemsAsync no longer clears the list on an empty fetch.
-                            StatusMessage = "GitHub token updated. Reloading systems...";
-                            _ = LoadSystemsAsync();
-                        }
-                        else
-                        {
-                            Log.Information("[OnUnauthorizedAccess] No new token provided. Continuing with limited access.");
-                        }
-                    }
-                    else
-                    {
-                        Log.Information("[OnUnauthorizedAccess] Token dialog cancelled. Continuing with limited access.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "[OnUnauthorizedAccess] Exception while handling unauthorized access event.");
-                }
-            });
+            InvokeOnDispatcherAsync(() => _ = HandleUnauthorizedAccessAsync());
         }
         catch (Exception ex)
         {
             Log.Error(ex, "[OnUnauthorizedAccess] Exception dispatching unauthorized access to UI thread.");
+        }
+    }
+
+    private async Task HandleUnauthorizedAccessAsync()
+    {
+        try
+        {
+            Log.Information("[OnUnauthorizedAccess] GitHub returned 401 Unauthorized. Prompting for token...");
+            await AppDialogs.ShowMessageAsync(
+                "GitHub returned a 401 Unauthorized error.\n\n" +
+                "Your GitHub token may be missing, invalid, or expired.\n" +
+                "Please enter a valid Personal Access Token to continue.",
+                "GitHub Authentication Required",
+                Icon.Warning);
+
+            if (AppDialogs.MainWindow is not { } owner)
+                return;
+
+            var dialog = new Views.TokenDialog(HasGitHubToken);
+            if (await dialog.ShowDialog<bool>(owner))
+            {
+                if (!string.IsNullOrEmpty(dialog.Token))
+                {
+                    var settings = SettingsManager.LoadSettings();
+                    settings.GitHubToken = dialog.Token;
+                    SettingsManager.SaveSettings(settings);
+
+                    UpdateToken(dialog.Token);
+                    Log.Information("[OnUnauthorizedAccess] New GitHub token saved and applied.");
+
+                    // Recover automatically so the user doesn't have to work out that
+                    // the previous request silently failed: reload the systems list with
+                    // the new token. This is safe against the stale in-flight request
+                    // because LoadSystemsAsync no longer clears the list on an empty fetch.
+                    StatusMessage = "GitHub token updated. Reloading systems...";
+                    _ = LoadSystemsAsync();
+                }
+                else
+                {
+                    Log.Information("[OnUnauthorizedAccess] No new token provided. Continuing with limited access.");
+                }
+            }
+            else
+            {
+                Log.Information("[OnUnauthorizedAccess] Token dialog cancelled. Continuing with limited access.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "[OnUnauthorizedAccess] Exception while handling unauthorized access event.");
         }
     }
 
@@ -593,13 +597,30 @@ public class MainViewModel : ViewModelBase, IDisposable
 
     protected virtual void SelectFolder(Action<string> setPath)
     {
+        _ = SelectFolderAsync(setPath);
+    }
+
+    private static async Task SelectFolderAsync(Action<string> setPath)
+    {
         try
         {
-            using var dialog = new FolderBrowserDialog();
-            if (dialog.ShowDialog() == DialogResult.OK)
+            if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime
+                {
+                    MainWindow: { } window
+                })
             {
-                setPath(dialog.SelectedPath);
+                return;
             }
+
+            var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Select folder",
+                AllowMultiple = false
+            });
+
+            var path = folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
+            if (!string.IsNullOrWhiteSpace(path))
+                setPath(path);
         }
         catch (Exception ex)
         {
@@ -1016,17 +1037,27 @@ public class MainViewModel : ViewModelBase, IDisposable
 
     protected virtual void InvokeOnDispatcher(Action action)
     {
-        Application.Current?.Dispatcher.Invoke(action);
+        if (Dispatcher.UIThread.CheckAccess())
+            action();
+        else
+            Dispatcher.UIThread.Invoke(action);
     }
 
     protected virtual void InvokeOnDispatcherAsync(Action action)
     {
-        _ = Application.Current?.Dispatcher.BeginInvoke(DispatcherPriority.Normal, action);
+        Dispatcher.UIThread.Post(action);
     }
 
     protected virtual void InvalidateCommands()
     {
-        CommandManager.InvalidateRequerySuggested();
+        BrowseRomCommand.RaiseCanExecuteChanged();
+        BrowseCoverCommand.RaiseCanExecuteChanged();
+        PrepareCommand.RaiseCanExecuteChanged();
+        DownloadCommand.RaiseCanExecuteChanged();
+        CancelCommand.RaiseCanExecuteChanged();
+        OpenUpdateUrlCommand.RaiseCanExecuteChanged();
+        DismissUpdateCommand.RaiseCanExecuteChanged();
+        CheckForUpdatesCommand.RaiseCanExecuteChanged();
     }
 
     protected virtual bool DirectoryExists(string path)

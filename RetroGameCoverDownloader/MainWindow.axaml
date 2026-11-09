@@ -1,0 +1,145 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:RetroGameCoverDownloader.ViewModels"
+        xmlns:models="using:RetroGameCoverDownloader.Models"
+        mc:Ignorable="d"
+        d:DesignWidth="900" d:DesignHeight="640"
+        x:Class="RetroGameCoverDownloader.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Retro Game Cover Downloader"
+        Width="900" Height="640"
+        MinWidth="760" MinHeight="540"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+        <!-- Brand header -->
+        <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1"
+                Padding="18,12">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <Image Grid.Column="0" Source="avares://RetroGameCoverDownloader/Assets/logo.png"
+                       Width="38" Height="38" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                    <TextBlock Text="Retro Game Cover Downloader" Classes="app-title" />
+                    <TextBlock Text="libretro-thumbnails cover art sync" Classes="muted" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="{Binding StatusMessage}" Classes="status"
+                           MaxWidth="360" TextTrimming="CharacterEllipsis" />
+            </Grid>
+        </Border>
+
+        <!-- Menu -->
+        <Menu Grid.Row="1" Padding="10,2">
+            <MenuItem Header="File">
+                <MenuItem Header="Proxy Settings" Click="ProxySettingsMenuItem_Click" />
+                <MenuItem Header="GitHub Token" Click="GitHubTokenMenuItem_Click" />
+                <MenuItem Header="File Extensions" Click="FileExtensionsMenuItem_Click" />
+                <Separator />
+                <MenuItem Header="Open AppData Folder" Click="OpenAppDataPathMenuItem_Click" />
+                <Separator />
+                <MenuItem Header="Exit" Click="ExitMenuItem_Click" />
+            </MenuItem>
+            <MenuItem Header="Help">
+                <MenuItem Header="Check for Updates" Command="{Binding CheckForUpdatesCommand}" />
+                <MenuItem Header="Save Screenshot (F8)" Click="ScreenshotMenuItem_Click" />
+                <Separator />
+                <MenuItem Header="About" Click="AboutMenuItem_Click" />
+            </MenuItem>
+        </Menu>
+
+        <!-- Update banner -->
+        <Border Grid.Row="2" IsVisible="{Binding UpdateAvailable}"
+                Background="{StaticResource UpdateBackgroundBrush}"
+                BorderBrush="{StaticResource UpdateBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="18,10">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                <TextBlock Grid.Column="0" Text="{Binding UpdateVersionText}"
+                           Foreground="{StaticResource UpdateTextBrush}"
+                           FontWeight="SemiBold" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Content="Download" Command="{Binding OpenUpdateUrlCommand}"
+                        Classes="primary" Padding="14,6" />
+                <Button Grid.Column="2" Content="✕" Command="{Binding DismissUpdateCommand}"
+                        Classes="secondary" Padding="10,6" />
+            </Grid>
+        </Border>
+
+        <!-- Main content -->
+        <Grid Grid.Row="3" Margin="18" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="12">
+            <!-- Folders -->
+            <Border Grid.Row="0" Classes="card">
+                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto"
+                      RowSpacing="10" ColumnSpacing="12">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="ROM folder" Classes="field-label"
+                               VerticalAlignment="Center" />
+                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding RomFolderPath}"
+                             IsReadOnly="True" PlaceholderText="Select the folder containing your ROMs" />
+                    <Button Grid.Row="0" Grid.Column="2" Content="Browse…"
+                            Command="{Binding BrowseRomCommand}" Classes="secondary" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Cover folder" Classes="field-label"
+                               VerticalAlignment="Center" />
+                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding CoverFolderPath}"
+                             IsReadOnly="True" PlaceholderText="Select the folder for downloaded covers" />
+                    <Button Grid.Row="1" Grid.Column="2" Content="Browse…"
+                            Command="{Binding BrowseCoverCommand}" Classes="secondary" />
+                </Grid>
+            </Border>
+
+            <!-- System selection -->
+            <Border Grid.Row="1" Classes="card">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <TextBlock Grid.Column="0" Text="System" Classes="field-label"
+                               VerticalAlignment="Center" />
+                    <ComboBox Grid.Column="1" HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding Systems}"
+                              SelectedItem="{Binding SelectedSystem, Mode=TwoWay}"
+                              IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}"
+                              PlaceholderText="Choose a system">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:SystemConfig">
+                                <TextBlock Text="{Binding SystemName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+            </Border>
+
+            <!-- Actions -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10"
+                        HorizontalAlignment="Center">
+                <Button Content="Prepare for Download" Command="{Binding PrepareCommand}"
+                        Classes="primary" MinWidth="180" />
+                <Button Content="Download Covers" Command="{Binding DownloadCommand}"
+                        Classes="primary" MinWidth="180" />
+                <Button Content="Cancel" Command="{Binding CancelCommand}"
+                        Classes="secondary" MinWidth="110" />
+            </StackPanel>
+
+            <!-- Progress -->
+            <Border Grid.Row="3" Classes="card" Padding="16,12">
+                <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                    <TextBlock Grid.Row="0" Text="{Binding StatusMessage}" Classes="status"
+                               HorizontalAlignment="Left" />
+                    <ProgressBar Grid.Row="1" Minimum="0"
+                                 Maximum="{Binding ProgressMax}"
+                                 Value="{Binding ProgressValue}" />
+                </Grid>
+            </Border>
+
+            <!-- Log -->
+            <Border Grid.Row="4" Classes="card">
+                <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                    <TextBlock Grid.Row="0" Text="Activity log" Classes="section-title" />
+                    <TextBox Grid.Row="1" Classes="log"
+                             Text="{Binding LogText, Mode=OneWay}"
+                             IsReadOnly="True"
+                             AcceptsReturn="True"
+                             TextChanged="LogTextBox_TextChanged" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

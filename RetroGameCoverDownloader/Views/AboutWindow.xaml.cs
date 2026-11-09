@@ -1,28 +1,27 @@
-using System.Windows;
-using System.Windows.Navigation;
+using System.Diagnostics.CodeAnalysis;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
 using RetroGameCoverDownloader.Helpers;
-using RetroGameCoverDownloader.Services;
 
 namespace RetroGameCoverDownloader.Views;
 
-public partial class AboutWindow
+[SuppressMessage("ReSharper", "UnusedMember.Local", Justification = "Event handlers are wired from AboutWindow.axaml.")]
+[SuppressMessage("ReSharper", "UnusedParameter.Local", Justification = "Event handlers are wired from AboutWindow.axaml.")]
+public partial class AboutWindow : Window
 {
     public AboutWindow()
     {
         InitializeComponent();
-
         AppVersionTextBlock.Text = $"Version: {AppInfo.VersionString}";
-        DescriptionTextBlock.Text = "A utility for downloading game cover art from libretro-thumbnails GitHub repositories for your ROM collection.";
     }
 
-    private void CloseButton_Click(object sender, RoutedEventArgs e)
+    private void CloseButton_Click(object? sender, RoutedEventArgs e)
     {
         Close();
     }
 
-    private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    private void WebsiteButton_Click(object? sender, RoutedEventArgs e)
     {
-        e.Handled = true;
-        UpdateCheckerService.OpenUrlInBrowser(e.Uri.AbsoluteUri);
+        PlatformHelper.OpenUrl("https://www.purelogiccode.com");
     }
 }

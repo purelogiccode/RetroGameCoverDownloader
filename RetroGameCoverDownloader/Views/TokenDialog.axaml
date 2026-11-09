@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="RetroGameCoverDownloader.Views.TokenDialog"
+        Title="GitHub Token Setup"
+        Width="660" Height="640"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="28" Spacing="10">
+            <TextBlock Text="GitHub Personal Access Token" Classes="title" />
+            <TextBlock Text="A token raises the GitHub API limit from roughly 55 to 4,900 requests per hour. It is optional."
+                       Classes="muted" />
+
+            <TextBlock Text="Why do I need this?" Classes="section-title" Margin="0,8,0,0" />
+            <TextBlock Classes="muted">
+                Without a token: 55 downloads/hour limit (~50 games).
+                With a token: 4,900 downloads/hour (recommended).
+            </TextBlock>
+
+            <TextBlock Text="What is it?" Classes="section-title" Margin="0,8,0,0" />
+            <TextBlock Classes="muted">
+                A secure authentication key that GitHub uses to identify you and grant higher usage limits.
+                It is free and easy to create.
+            </TextBlock>
+
+            <TextBlock Text="How to get one (free):" Classes="section-title" Margin="0,8,0,0" />
+            <StackPanel Spacing="4">
+                <Button Content="1. Open the GitHub token settings page" Classes="link"
+                        Click="GitHubTokenLink_Click" />
+                <TextBlock Text="2. Select the public_repo scope." Classes="muted" />
+                <TextBlock Text="3. Click 'Generate token' and copy it below." Classes="muted" />
+            </StackPanel>
+
+            <Border x:Name="ExistingTokenPanel" IsVisible="False" Classes="card" Padding="12" Margin="0,6,0,0">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Current token" Classes="field-label" />
+                    <TextBlock Text="**************************" FontFamily="Cascadia Mono, Consolas, monospace" />
+                    <TextBlock Text="Enter a new token below to replace it, or leave empty to keep the current one."
+                               Classes="muted" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="Token (optional)" Classes="field-label" Margin="0,8,0,0" />
+            <TextBox x:Name="TokenBox" PasswordChar="●" PlaceholderText="ghp_..." />
+            <TextBlock Text="Leave empty to proceed without a token, but expect slower downloads." Classes="muted" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,12,0,0">
+                <Button Content="Cancel" IsCancel="True" Classes="secondary" Click="CancelButton_Click" />
+                <Button Content="Save &amp; Continue" Classes="primary" Click="SaveButton_Click" IsDefault="True" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

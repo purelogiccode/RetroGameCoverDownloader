@@ -2,51 +2,51 @@
 
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
-        <TargetFramework>net10.0-windows</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <UseWPF>true</UseWPF>
-        <UseWindowsForms>true</UseWindowsForms>
-        <ApplicationIcon>icon\icon.ico</ApplicationIcon>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <ApplicationIcon>Assets/icon.ico</ApplicationIcon>
         <IsPackable>false</IsPackable>
-        <AssemblyVersion>1.5.0</AssemblyVersion>
-        <FileVersion>1.5.0</FileVersion>
+        <AssemblyVersion>2.0.0</AssemblyVersion>
+        <FileVersion>2.0.0</FileVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
         <Company>PureLogicCode.com</Company>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     </PropertyGroup>
 
     <ItemGroup>
-      <None Remove="images\about.png" />
-      <Resource Include="images\about.png" />
-      <None Remove="images\exit.png" />
-      <Resource Include="images\exit.png" />
-      <None Remove="images\logo.png" />
-      <Resource Include="images\logo.png" />
+        <AvaloniaResource Include="Assets/**" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Meziantou.Analyzer" Version="3.0.322">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="Roslynator.Analyzers" Version="5.0.1">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="Roslynator.CodeAnalysis.Analyzers" Version="5.0.1">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="Roslynator.Formatting.Analyzers" Version="5.0.1">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="Serilog" Version="4.4.0" />
-      <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
-      <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-      <PackageReference Include="WPF-UI" Version="4.3.0" />
+        <PackageReference Include="Avalonia" Version="12.1.6" />
+        <PackageReference Include="Avalonia.Desktop" Version="12.1.6" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.6" />
+        <PackageReference Include="MessageBox.Avalonia" Version="12.1.0" />
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.322">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Roslynator.Analyzers" Version="5.0.1">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Roslynator.CodeAnalysis.Analyzers" Version="5.0.1">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Roslynator.Formatting.Analyzers" Version="5.0.1">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Serilog" Version="4.4.0" />
+        <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
+        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+        <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.14" />
     </ItemGroup>
 
 </Project>

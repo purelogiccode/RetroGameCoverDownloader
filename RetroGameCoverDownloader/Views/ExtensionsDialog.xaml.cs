@@ -1,17 +1,25 @@
-using System.Windows;
+using System.Diagnostics.CodeAnalysis;
+using System.Collections.ObjectModel;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
 using RetroGameCoverDownloader.Managers;
+using RetroGameCoverDownloader.Services;
 using Serilog;
-using MessageBox = System.Windows.MessageBox;
 
 namespace RetroGameCoverDownloader.Views;
 
-public partial class ExtensionsDialog
+[SuppressMessage("ReSharper", "UnusedMember.Local", Justification = "Event handlers are wired from ExtensionsDialog.axaml.")]
+[SuppressMessage("ReSharper", "UnusedParameter.Local", Justification = "Event handlers are wired from ExtensionsDialog.axaml.")]
+public partial class ExtensionsDialog : Window
 {
+    private readonly ObservableCollection<string> _extensions = [];
+
     public List<string> FileExtensions { get; private set; } = [];
 
     public ExtensionsDialog()
     {
         InitializeComponent();
+        ExtensionsListBox.ItemsSource = _extensions;
         LoadCurrentExtensions();
     }
 
@@ -21,12 +29,10 @@ public partial class ExtensionsDialog
         {
             var settings = SettingsManager.LoadSettings();
             FileExtensions = settings.FileExtensions.ToList();
+            _extensions.Clear();
 
-            ExtensionsListBox.Items.Clear();
-            foreach (var ext in FileExtensions.OrderBy(static e => e, StringComparer.OrdinalIgnoreCase))
-            {
-                ExtensionsListBox.Items.Add(ext);
-            }
+            foreach (var extension in FileExtensions.OrderBy(static e => e, StringComparer.OrdinalIgnoreCase))
+                _extensions.Add(extension);
         }
         catch (Exception ex)
         {
@@ -34,78 +40,71 @@ public partial class ExtensionsDialog
         }
     }
 
-    private void AddButton_Click(object sender, RoutedEventArgs e)
+    private async void AddButton_Click(object? sender, RoutedEventArgs e)
     {
-        var input = NewExtensionBox.Text.Trim();
+        var input = NewExtensionBox.Text?.Trim() ?? "";
 
         if (string.IsNullOrWhiteSpace(input))
         {
-            MessageBox.Show("Please enter a file extension.", "Validation Error",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            await AppDialogs.ShowMessageAsync("Please enter a file extension.", "Validation Error", MsBox.Avalonia.Enums.Icon.Warning);
             NewExtensionBox.Focus();
             return;
         }
 
         if (!input.StartsWith('.'))
-        {
             input = "." + input;
-        }
 
         input = input.ToLowerInvariant();
 
-        if (ExtensionsListBox.Items.Cast<string>().Any(ext =>
-                string.Equals(ext, input, StringComparison.OrdinalIgnoreCase)))
+        if (_extensions.Any(ext => string.Equals(ext, input, StringComparison.OrdinalIgnoreCase)))
         {
-            MessageBox.Show("This extension is already in the list.", "Duplicate",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            await AppDialogs.ShowMessageAsync("This extension is already in the list.", "Duplicate");
             NewExtensionBox.Focus();
             return;
         }
 
-        ExtensionsListBox.Items.Add(input);
-        NewExtensionBox.Clear();
+        _extensions.Add(input);
+        NewExtensionBox.Text = "";
         NewExtensionBox.Focus();
     }
 
-    private void RemoveButton_Click(object sender, RoutedEventArgs e)
+    private async void RemoveButton_Click(object? sender, RoutedEventArgs e)
     {
         if (ExtensionsListBox.SelectedItem is string selected)
         {
-            ExtensionsListBox.Items.Remove(selected);
+            _extensions.Remove(selected);
+            return;
         }
-        else
-        {
-            MessageBox.Show("Please select an extension to remove.", "No Selection",
-                MessageBoxButton.OK, MessageBoxImage.Information);
-        }
+
+        await AppDialogs.ShowMessageAsync("Please select an extension to remove.", "No Selection");
     }
 
-    private void ResetButton_Click(object sender, RoutedEventArgs e)
+    private void ResetButton_Click(object? sender, RoutedEventArgs e)
     {
-        ExtensionsListBox.Items.Clear();
-        foreach (var ext in Models.AppSettings.DefaultExtensions.OrderBy(static x => x, StringComparer.OrdinalIgnoreCase))
-        {
-            ExtensionsListBox.Items.Add(ext);
-        }
+        _extensions.Clear();
+        foreach (var extension in Models.AppSettings.DefaultExtensions.OrderBy(static x => x, StringComparer.OrdinalIgnoreCase))
+            _extensions.Add(extension);
     }
 
-    private void SaveButton_Click(object sender, RoutedEventArgs e)
+    private void SaveButton_Click(object? sender, RoutedEventArgs e)
     {
         try
         {
-            FileExtensions = ExtensionsListBox.Items.Cast<string>().ToList();
-            DialogResult = true;
+            FileExtensions = _extensions.ToList();
+            Close(true);
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Failed to save extensions.");
-            MessageBox.Show("An error occurred while saving. Please try again.", "Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            _ = AppDialogs.ShowMessageAsync(
+                "An error occurred while saving. Please try again.",
+                "Error",
+                MsBox.Avalonia.Enums.Icon.Error);
         }
     }
 
-    private void CancelButton_Click(object sender, RoutedEventArgs e)
+    private void CancelButton_Click(object? sender, RoutedEventArgs e)
     {
-        DialogResult = false;
+        Close(false);
     }
 }

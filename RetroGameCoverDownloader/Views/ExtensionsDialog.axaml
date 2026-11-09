@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="RetroGameCoverDownloader.Views.ExtensionsDialog"
+        Title="File Extensions"
+        Width="460" Height="540"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+
+    <Grid Margin="24" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowSpacing="10">
+        <TextBlock Grid.Row="0" Text="File Extensions" Classes="title" />
+        <TextBlock Grid.Row="1" Classes="muted">
+            Only files with these extensions are scanned as ROMs. Add or remove extensions as needed.
+            Leave the list empty to scan all files.
+        </TextBlock>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <TextBox x:Name="NewExtensionBox" PlaceholderText=".nes" />
+            <Button Grid.Column="1" Content="Add" Click="AddButton_Click" Classes="secondary" />
+        </Grid>
+
+        <ListBox Grid.Row="3" x:Name="ExtensionsListBox" SelectionMode="Single" />
+
+        <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+            <Button Grid.Column="1" Content="Remove" Click="RemoveButton_Click" Classes="secondary" />
+            <Button Grid.Column="2" Content="Reset Defaults" Click="ResetButton_Click" Classes="secondary" />
+        </Grid>
+
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+            <Button Content="Cancel" IsCancel="True" Click="CancelButton_Click" Classes="secondary" />
+            <Button Content="Save" Click="SaveButton_Click" Classes="primary" IsDefault="True" />
+        </StackPanel>
+    </Grid>
+</Window>

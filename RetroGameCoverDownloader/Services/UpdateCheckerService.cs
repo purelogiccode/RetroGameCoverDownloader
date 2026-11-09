@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using RetroGameCoverDownloader.Helpers;
@@ -83,48 +81,8 @@ public static partial class UpdateCheckerService
 
     public static void OpenUrlInBrowser(string url)
     {
-        if (TryOpenWithShellExecute(url)) return;
-        if (TryOpenWithCmdStart(url)) return;
-
-        try { System.Windows.Clipboard.SetText(url); }
-        catch
-        {
-            // ignored
-        }
-
-        Log.Error("All browser-launch strategies failed for URL: {Url}", url);
-
-        System.Windows.MessageBox.Show(
-            $"Could not launch the browser automatically.\n\nThe URL has been copied to your clipboard:\n\n{url}",
-            "Error",
-            System.Windows.MessageBoxButton.OK,
-            System.Windows.MessageBoxImage.Error);
-    }
-
-    private static bool TryOpenWithShellExecute(string url)
-    {
-        try
-        {
-            Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
-            return true;
-        }
-        catch { return false; }
-    }
-
-    private static bool TryOpenWithCmdStart(string url)
-    {
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                Arguments = $"/c start \"\" \"{url}\"",
-                UseShellExecute = false,
-                CreateNoWindow = true
-            });
-            return true;
-        }
-        catch { return false; }
+        if (!PlatformHelper.OpenUrl(url))
+            Log.Error("Could not launch the browser for URL: {Url}", url);
     }
 
     [GeneratedRegex(@"\d+\.\d+\.\d+(?:\.\d+)?", RegexOptions.None, 1000)]

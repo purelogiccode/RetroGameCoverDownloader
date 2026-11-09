@@ -1,4 +1,3 @@
-using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -23,6 +22,15 @@ public static class SettingsManager
     // real key from the current Windows user's credentials); it just ties the blob to
     // this application so it can't be trivially decrypted by unrelated CurrentUser code.
     private static readonly byte[] Entropy = "RetroGameCoverDownloader.Settings.v2"u8.ToArray();
+
+    private static readonly byte[] AesMagicBytes = "RGCDA1"u8.ToArray();
+    private const int AesKeySize = 32;
+    private const int AesNonceSize = 12;
+    private const int AesTagSize = 16;
+
+    private static readonly Lock KeyLock = new();
+    private static readonly string KeyFilePath = Path.Combine(
+        AppInfo.LocalAppDataFolderPath, "settings.key");
 
     // When nothing has been loaded yet, default to the (writable) per-user AppData
     // location. This must match the fallback used by SaveSettings() so that
@@ -150,7 +158,7 @@ public static class SettingsManager
                 }
                 catch (Exception ex) when (ex is CryptographicException or FormatException)
                 {
-                    settings.GitHubToken = tokenNode.InnerText;
+                    settings.GitHubToken = OperatingSystem.IsWindows() ? tokenNode.InnerText : null;
                 }
             }
 
@@ -178,7 +186,7 @@ public static class SettingsManager
                 }
                 catch (Exception ex) when (ex is CryptographicException or FormatException)
                 {
-                    settings.ProxyPassword = passNode.InnerText;
+                    settings.ProxyPassword = OperatingSystem.IsWindows() ? passNode.InnerText : null;
                 }
             }
 
@@ -208,21 +216,107 @@ public static class SettingsManager
 
     private static string DecryptLegacyString(string encryptedText)
     {
+        if (!OperatingSystem.IsWindows())
+            throw new CryptographicException("Legacy DPAPI settings can only be decrypted on Windows.");
+
         var bytes = Convert.FromBase64String(encryptedText);
         var unprotected = ProtectedData.Unprotect(bytes, null, DataProtectionScope.CurrentUser);
         return Encoding.UTF8.GetString(unprotected);
     }
 
-    // Protect the settings blob with Windows DPAPI (CurrentUser scope). The encryption
-    // key is derived from the logged-in user's credentials by the OS and never leaves
-    // the machine, so the file cannot be decrypted by another user or on another PC.
+    // Windows uses DPAPI (CurrentUser scope): the key is derived from the logged-in
+    // user's credentials by the OS and never leaves the machine. Linux and macOS use
+    // AES-GCM with a 256-bit key stored in the per-user AppData folder with user-only
+    // permissions (0600 on Unix-like systems).
     private static byte[] EncryptBytes(byte[] plainBytes)
     {
-        return ProtectedData.Protect(plainBytes, Entropy, DataProtectionScope.CurrentUser);
+        return OperatingSystem.IsWindows()
+            ? ProtectedData.Protect(plainBytes, Entropy, DataProtectionScope.CurrentUser)
+            : EncryptWithAesGcm(plainBytes);
     }
 
     private static byte[] DecryptBytes(byte[] encryptedBytes)
     {
-        return ProtectedData.Unprotect(encryptedBytes, Entropy, DataProtectionScope.CurrentUser);
+        if (encryptedBytes.AsSpan().StartsWith(AesMagicBytes))
+            return DecryptWithAesGcm(encryptedBytes);
+
+        if (OperatingSystem.IsWindows())
+            return ProtectedData.Unprotect(encryptedBytes, Entropy, DataProtectionScope.CurrentUser);
+
+        throw new CryptographicException(
+            "The settings file uses Windows DPAPI and cannot be decrypted on this platform.");
+    }
+
+    private static byte[] EncryptWithAesGcm(byte[] plainBytes)
+    {
+        var key = GetOrCreateKey();
+        var nonce = RandomNumberGenerator.GetBytes(AesNonceSize);
+        var tag = new byte[AesTagSize];
+        var ciphertext = new byte[plainBytes.Length];
+
+        using var aes = new AesGcm(key, AesTagSize);
+        aes.Encrypt(nonce, plainBytes, ciphertext, tag);
+
+        var result = new byte[AesMagicBytes.Length + AesNonceSize + AesTagSize + ciphertext.Length];
+        var offset = 0;
+        AesMagicBytes.CopyTo(result, offset);
+        offset += AesMagicBytes.Length;
+        nonce.CopyTo(result, offset);
+        offset += AesNonceSize;
+        tag.CopyTo(result, offset);
+        offset += AesTagSize;
+        ciphertext.CopyTo(result, offset);
+        return result;
+    }
+
+    private static byte[] DecryptWithAesGcm(byte[] encryptedBytes)
+    {
+        if (encryptedBytes.Length < AesMagicBytes.Length + AesNonceSize + AesTagSize)
+            throw new CryptographicException("The encrypted settings file is too short.");
+
+        var offset = AesMagicBytes.Length;
+        var nonce = encryptedBytes.AsSpan(offset, AesNonceSize).ToArray();
+        offset += AesNonceSize;
+        var tag = encryptedBytes.AsSpan(offset, AesTagSize).ToArray();
+        offset += AesTagSize;
+        var ciphertext = encryptedBytes.AsSpan(offset).ToArray();
+
+        var plaintext = new byte[ciphertext.Length];
+        using var aes = new AesGcm(GetOrCreateKey(), AesTagSize);
+        aes.Decrypt(nonce, ciphertext, tag, plaintext);
+        return plaintext;
+    }
+
+    private static byte[] GetOrCreateKey()
+    {
+        lock (KeyLock)
+        {
+            if (File.Exists(KeyFilePath))
+            {
+                var existingKey = File.ReadAllBytes(KeyFilePath);
+                if (existingKey.Length == AesKeySize)
+                    return existingKey;
+
+                throw new CryptographicException("The settings encryption key file is invalid.");
+            }
+
+            var directory = Path.GetDirectoryName(KeyFilePath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            var key = RandomNumberGenerator.GetBytes(AesKeySize);
+            var temporaryPath = KeyFilePath + ".tmp";
+            File.WriteAllBytes(temporaryPath, key);
+
+            if (!OperatingSystem.IsWindows())
+                File.SetUnixFileMode(temporaryPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+
+            File.Move(temporaryPath, KeyFilePath, overwrite: true);
+
+            if (!OperatingSystem.IsWindows())
+                File.SetUnixFileMode(KeyFilePath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+
+            return key;
+        }
     }
 }

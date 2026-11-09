@@ -1,4 +1,3 @@
-using System.IO;
 using RetroGameCoverDownloader.Managers;
 using RetroGameCoverDownloader.Models;
 using Xunit;

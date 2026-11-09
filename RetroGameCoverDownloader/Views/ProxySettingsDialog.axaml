@@ -1,0 +1,45 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="RetroGameCoverDownloader.Views.ProxySettingsDialog"
+        Title="Proxy Settings"
+        Width="540" Height="600"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="28" Spacing="10">
+            <TextBlock Text="Proxy Configuration" Classes="title" />
+            <TextBlock Text="If you cannot connect to GitHub directly because of network restrictions, configure an HTTP proxy below."
+                       Classes="muted" Margin="0,0,0,6" />
+
+            <CheckBox x:Name="UseProxyCheckBox" Content="Enable proxy"
+                      IsCheckedChanged="UseProxyCheckBox_Changed" />
+
+            <StackPanel x:Name="ProxySettingsPanel" IsEnabled="False" Spacing="8">
+                <TextBlock Text="Proxy host" Classes="field-label" />
+                <TextBox x:Name="ProxyHostBox" PlaceholderText="127.0.0.1 or proxy.example.com" />
+
+                <TextBlock Text="Proxy port" Classes="field-label" />
+                <TextBox x:Name="ProxyPortBox" PlaceholderText="8080" />
+
+                <TextBlock Text="Authentication (optional)" Classes="field-label" />
+                <TextBlock Text="Only fill in a username and password if your proxy requires authentication."
+                           Classes="muted" />
+
+                <TextBlock Text="Username" Classes="field-label" />
+                <TextBox x:Name="ProxyUsernameBox" PlaceholderText="Proxy username" />
+
+                <TextBlock Text="Password" Classes="field-label" />
+                <TextBox x:Name="ProxyPasswordBox" PasswordChar="●" PlaceholderText="Proxy password" />
+            </StackPanel>
+
+            <TextBlock Text="Proxy settings are applied immediately after saving." Classes="muted" Margin="0,8,0,0" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,12,0,0">
+                <Button Content="Cancel" IsCancel="True" Classes="secondary" Click="CancelButton_Click" />
+                <Button Content="Save" Classes="primary" Click="SaveButton_Click" IsDefault="True" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

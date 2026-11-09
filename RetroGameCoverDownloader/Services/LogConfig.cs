@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO;
 using RetroGameCoverDownloader.Helpers;
 using Serilog;
 using Serilog.Events;
